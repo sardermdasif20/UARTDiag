@@ -8,10 +8,9 @@
 
 <br>
 
-![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge\&logo=cplusplus\&logoColor=white)
-![CMake](https://img.shields.io/badge/CMake-3.20%2B-064F8C?style=for-the-badge\&logo=cmake\&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-71%20Passing-2ea44f?style=for-the-badge)
-![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge\&logo=windows\&logoColor=white)
+
+
+\
 
 <br>
 
@@ -25,7 +24,7 @@
 
 **UARTDiag** is a C++17 diagnostic and fault-analysis tool for framed UART communication.
 
-It takes raw UART bytes, reconstructs protocol frames, validates their structure and CRC, detects communication problems, classifies diagnostic severity, and produces structured reports.
+It takes raw UART bytes, reconstructs protocol frames, validates their structure and CRC, detects communication problems, classifies diagnostic severity, and produces structured diagnostic reports.
 
 The project also includes:
 
@@ -34,9 +33,13 @@ The project also includes:
 * Windows serial communication
 * Stream resynchronization
 * Diagnostic severity classification
+* Diagnostic summary reporting
+* Structured diagnostic reports
+* Session statistics
 * CSV logging
 * External configuration files
-* Automated GoogleTest/CTest testing
+* Automated GoogleTest and CTest testing
+* CLI regression testing
 
 The architecture is designed to keep protocol processing independent from the physical communication layer.
 
@@ -95,12 +98,14 @@ Raw UART Data
 
 * GoogleTest
 * CTest integration
-* 71 automated tests
+* 90 automated tests
 * Parser recovery tests
 * Fault injection tests
 * Simulation tests
 * Logger tests
 * Configuration tests
+* Diagnostic report tests
+* CLI regression tests
 
 </td>
 </tr>
@@ -112,6 +117,7 @@ Raw UART Data
 
 * Structured diagnostic reports
 * Diagnostic severity classification
+* Diagnostic summary reporting
 * CRC error detection
 * Invalid-length detection
 * Unknown-frame detection
@@ -200,7 +206,7 @@ CRC     = BC
                             │
              ┌──────────────┴──────────────┐
              │                             │
-       Physical UART                  Simulation
+       Physical UART                 Simulation
              │                             │
              └──────────────┬──────────────┘
                             ▼
@@ -261,7 +267,8 @@ UARTDiag/
 │   ├── test_simulation.cpp
 │   ├── test_logger.cpp
 │   ├── test_diagnostics.cpp
-│   └── test_config.cpp
+│   ├── test_config.cpp
+│   └── test_report.cpp
 │
 ├── docs/
 │   └── architecture.md
@@ -558,12 +565,21 @@ Statistics include:
 
 ```text
 Frames processed
+
 Valid frames
 Invalid frames
+
 Info diagnostics
 Warning diagnostics
 Error diagnostics
 Critical diagnostics
+
+Valid status
+Frame too short
+Invalid start
+Invalid length
+Unknown type
+CRC error
 ```
 
 The same statistics system is used for both:
@@ -641,6 +657,68 @@ This allows a captured UART frame to be analyzed directly without connecting a p
 
 ---
 
+# 🧪 Testing
+
+UARTDiag uses both **GoogleTest** and **CTest**.
+
+The automated test suite currently contains:
+
+```text
+90 tests
+90 passing
+0 failing
+```
+
+### GoogleTest coverage
+
+The test suite covers:
+
+* Frame encoding and decoding
+* CRC calculation
+* Diagnostic classification
+* Diagnostic severity
+* Diagnostic summaries
+* Stream parsing
+* Stream resynchronization
+* Simulation scenarios
+* Fault injection
+* CSV logging
+* Configuration parsing
+* Diagnostic reports
+* Report consistency
+
+### CLI regression tests
+
+CTest also runs end-to-end CLI tests:
+
+```text
+cli_simulate_valid
+cli_simulate_crc
+cli_simulate_all
+```
+
+These tests execute the actual `uartdiag` executable and verify that the simulation modes run successfully.
+
+### Run the complete test suite
+
+```powershell
+ctest --test-dir build --output-on-failure
+```
+
+Expected result:
+
+```text
+100% tests passed, 0 tests failed out of 90
+```
+
+<div align="center">
+
+### ✅ 90 / 90 TESTS PASSING
+
+</div>
+
+---
+
 # 🧰 Build
 
 ## Requirements
@@ -682,36 +760,40 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Current result:
-
-<div align="center">
-
-### ✅ 71 / 71 TESTS PASSING
-
-</div>
-
 ---
 
 # 🧪 Testing Strategy
 
-The test suite covers multiple layers of the application.
+The test architecture covers multiple layers of the application.
 
 ```text
-┌──────────────────────────────┐
-│       GoogleTest Suite       │
-├──────────────────────────────┤
-│                              │
-│ Frame / CRC                  │
-│ Decoder                      │
-│ Diagnostics                 │
-│ Diagnostic Severity          │
-│ Stream Parser                │
-│ Simulation                   │
-│ Fault Injection              │
-│ CSV Logger                   │
-│ Configuration                │
-│                              │
-└──────────────────────────────┘
+┌──────────────────────────────────┐
+│          GoogleTest Suite        │
+├──────────────────────────────────┤
+│                                  │
+│ Frame / CRC                      │
+│ Decoder                          │
+│ Diagnostics                      │
+│ Diagnostic Severity              │
+│ Diagnostic Summary               │
+│ Stream Parser                    │
+│ Simulation                       │
+│ Fault Injection                  │
+│ CSV Logger                       │
+│ Configuration                    │
+│ Diagnostic Reports               │
+│                                  │
+└──────────────────────────────────┘
+
+┌──────────────────────────────────┐
+│          CTest CLI Tests         │
+├──────────────────────────────────┤
+│                                  │
+│ Simulation: valid                │
+│ Simulation: CRC fault            │
+│ Simulation: all scenarios        │
+│                                  │
+└──────────────────────────────────┘
 ```
 
 Testing is integrated with CTest:
@@ -723,8 +805,9 @@ ctest --test-dir build --output-on-failure
 Current automated test count:
 
 ```text
-71 tests
-71 passing
+90 tests
+90 passing
+0 failing
 ```
 
 The test suite verifies both normal operation and failure conditions.
@@ -752,7 +835,7 @@ This project focuses on practical engineering skills:
 
 ```text
 C++
-│
+
 ├── Object-Oriented Design
 ├── RAII
 ├── STL
@@ -813,8 +896,11 @@ Potential future improvements:
 | Stream parser          |    ✅   |
 | Diagnostics            |    ✅   |
 | Diagnostic severity    |    ✅   |
+| Diagnostic summaries   |    ✅   |
+| Structured reports     |    ✅   |
 | Fault injection        |    ✅   |
 | Automated testing      |    ✅   |
+| CLI regression testing |    ✅   |
 | Windows serial support |    ✅   |
 | UART simulation        |    ✅   |
 | CSV logging            |    ✅   |
@@ -824,7 +910,7 @@ Potential future improvements:
 
 <br>
 
-**UARTDiag is actively developed as an embedded/protocol diagnostics portfolio project.**
+**UARTDiag is a tested embedded/protocol diagnostics portfolio project.**
 
 </div>
 
@@ -838,17 +924,33 @@ Instead of treating UART communication as a simple byte stream, the project prov
 
 ```text
 RAW DATA
+
    ↓
+
 PROTOCOL PARSING
+
    ↓
+
 VALIDATION
+
    ↓
+
 FAULT DETECTION
+
    ↓
+
 SEVERITY CLASSIFICATION
+
    ↓
+
 DIAGNOSTIC REPORT
+
    ↓
+
+SESSION SUMMARY
+
+   ↓
+
 PERSISTENT LOG
 ```
 
@@ -864,6 +966,6 @@ The project demonstrates a complete path from raw communication data to structur
 
 **UART Protocol Diagnostics & Fault Analysis**
 
-Built with C++17 · CMake · GoogleTest
+Built with C++17 · CMake · GoogleTest · CTest
 
 </div>
