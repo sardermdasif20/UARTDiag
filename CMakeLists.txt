@@ -20,6 +20,7 @@ add_library(uartdiag_lib
     src/logger.cpp
     src/serial.cpp
     src/stream.cpp
+    src/config.cpp
 )
 
 target_include_directories(uartdiag_lib
@@ -106,3 +107,15 @@ target_link_libraries(uartdiag_diagnostics_tests
 )
 
 gtest_discover_tests(uartdiag_diagnostics_tests)
+
+add_executable(uartdiag_config_tests
+    tests/test_config.cpp
+)
+
+target_link_libraries(uartdiag_config_tests
+    PRIVATE
+        uartdiag_lib
+        GTest::gtest_main
+)
+
+gtest_discover_tests(uartdiag_config_tests)
