@@ -17,6 +17,8 @@ add_library(uartdiag_lib
     src/diagnostics.cpp
     src/hex.cpp
     src/report.cpp
+    src/serial.cpp
+    src/stream.cpp
 )
 
 target_include_directories(uartdiag_lib
@@ -67,3 +69,15 @@ target_link_libraries(uartdiag_tests
 include(GoogleTest)
 
 gtest_discover_tests(uartdiag_tests)
+
+add_executable(uartdiag_simulation_tests
+    tests/test_simulation.cpp
+)
+
+target_link_libraries(uartdiag_simulation_tests
+    PRIVATE
+        uartdiag_lib
+        GTest::gtest_main
+)
+
+gtest_discover_tests(uartdiag_simulation_tests)

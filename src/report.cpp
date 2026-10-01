@@ -54,6 +54,22 @@ std::string format_report(
         << "\nUARTDiag Diagnostic Report\n"
         << "========================================\n";
 
+    if (report.has_frame_number) {
+
+        output
+            << "Frame Number:   "
+            << report.frame_number
+            << '\n';
+    }
+
+    if (report.has_timestamp) {
+
+        output
+            << "Timestamp:      "
+            << report.timestamp
+            << '\n';
+    }
+
     output
         << "\nInput\n"
         << "-----\n"
@@ -82,8 +98,10 @@ std::string format_report(
             << '\n';
     }
 
-    if (!report.payload.empty() ||
-        report.result.status == DiagnosticStatus::Valid) {
+    if (
+        !report.payload.empty() ||
+        report.result.status == DiagnosticStatus::Valid
+    ) {
 
         output
             << "Payload:        "
@@ -114,17 +132,20 @@ std::string format_report(
         << '\n';
 
     if (report.result.status == DiagnosticStatus::Valid) {
+
         output
             << "CRC Status:     PASS\n";
     }
     else if (
         report.result.status ==
-        DiagnosticStatus::CrcError) {
+        DiagnosticStatus::CrcError
+    ) {
 
         output
             << "CRC Status:     FAIL\n";
     }
     else {
+
         output
             << "CRC Status:     NOT VERIFIED\n";
     }

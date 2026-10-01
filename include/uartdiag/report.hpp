@@ -24,6 +24,15 @@ struct DiagnosticReport {
     std::uint8_t received_crc{0};
 
     DiagnosticResult result;
+
+    /*
+     * Optional serial-session metadata.
+     */
+    bool has_frame_number{false};
+    std::size_t frame_number{0};
+
+    bool has_timestamp{false};
+    std::string timestamp;
 };
 
 std::string format_report(
