@@ -1,3 +1,5 @@
+#include "uartdiag/decoder.hpp"
+#include "uartdiag/frame.hpp"
 #include "uartdiag/report.hpp"
 
 #include <cstdint>
@@ -362,6 +364,227 @@ TEST(DiagnosticReportTest, FormatsCriticalSeverity) {
 
     EXPECT_NE(
         output.find("Message:        Critical frame error."),
+        std::string::npos
+    );
+}
+
+/*
+ * Phase 14.5:
+ * Verify that a real encoded frame can be decoded and then
+ * represented consistently inside DiagnosticReport.
+ */
+TEST(DiagnosticReportTest, EncodedFrameDataMatchesReportFields) {
+    uartdiag::Frame frame;
+
+    frame.type =
+        uartdiag::FrameType::SensorData;
+
+    frame.payload = {
+        0x10,
+        0x20,
+        0x30
+    };
+
+    const auto encoded =
+        uartdiag::encode_frame(frame);
+
+    uartdiag::Decoder decoder;
+    uartdiag::Frame decoded;
+
+    const auto result =
+        decoder.decode(
+            encoded,
+            decoded
+        );
+
+    ASSERT_EQ(
+        result.status,
+        uartdiag::DiagnosticStatus::Valid
+    );
+
+    uartdiag::DiagnosticReport report;
+
+    report.raw_data = encoded;
+
+    report.has_frame_type = true;
+    report.frame_type = decoded.type;
+
+    report.has_payload_length = true;
+    report.payload_length =
+        decoded.payload.size();
+
+    report.payload =
+        decoded.payload;
+
+    report.expected_crc =
+        result.expected_crc;
+
+    report.received_crc =
+        result.received_crc;
+
+    report.result =
+        result;
+
+    EXPECT_EQ(
+        report.frame_type,
+        frame.type
+    );
+
+    EXPECT_EQ(
+        report.payload_length,
+        frame.payload.size()
+    );
+
+    EXPECT_EQ(
+        report.payload,
+        frame.payload
+    );
+
+    EXPECT_EQ(
+        report.expected_crc,
+        report.received_crc
+    );
+
+    EXPECT_TRUE(
+        report.result.is_valid()
+    );
+
+    const std::string output =
+        uartdiag::format_report(report);
+
+    EXPECT_NE(
+        output.find("Type:           SENSOR_DATA"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Payload Length: 3"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Payload:        10 20 30 "),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("CRC Status:     PASS"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Status:         VALID"),
+        std::string::npos
+    );
+}
+
+TEST(DiagnosticReportTest, CrcErrorReportPreservesDecodedPayload) {
+    uartdiag::Frame frame;
+
+    frame.type =
+        uartdiag::FrameType::Command;
+
+    frame.payload = {
+        0xAA,
+        0x55
+    };
+
+    auto encoded =
+        uartdiag::encode_frame(frame);
+
+    ASSERT_FALSE(
+        encoded.empty()
+    );
+
+    encoded.back() ^= 0xFF;
+
+    uartdiag::Decoder decoder;
+    uartdiag::Frame decoded;
+
+    const auto result =
+        decoder.decode(
+            encoded,
+            decoded
+        );
+
+    ASSERT_EQ(
+        result.status,
+        uartdiag::DiagnosticStatus::CrcError
+    );
+
+    uartdiag::DiagnosticReport report;
+
+    report.raw_data = encoded;
+
+    report.has_frame_type = true;
+    report.frame_type = decoded.type;
+
+    report.has_payload_length = true;
+    report.payload_length =
+        decoded.payload.size();
+
+    report.payload =
+        decoded.payload;
+
+    report.expected_crc =
+        result.expected_crc;
+
+    report.received_crc =
+        result.received_crc;
+
+    report.result =
+        result;
+
+    EXPECT_EQ(
+        report.frame_type,
+        uartdiag::FrameType::Command
+    );
+
+    EXPECT_EQ(
+        report.payload,
+        frame.payload
+    );
+
+    EXPECT_NE(
+        report.expected_crc,
+        report.received_crc
+    );
+
+    EXPECT_EQ(
+        report.result.status,
+        uartdiag::DiagnosticStatus::CrcError
+    );
+
+    EXPECT_EQ(
+        report.result.severity,
+        uartdiag::DiagnosticSeverity::Error
+    );
+
+    const std::string output =
+        uartdiag::format_report(report);
+
+    EXPECT_NE(
+        output.find("Type:           COMMAND"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Payload:        AA 55 "),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("CRC Status:     FAIL"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Status:         CRC_ERROR"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Severity:       ERROR"),
         std::string::npos
     );
 }
