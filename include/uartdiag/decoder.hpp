@@ -1,5 +1,6 @@
 #pragma once
 
+#include "uartdiag/diagnostics.hpp"
 #include "uartdiag/frame.hpp"
 
 #include <cstdint>
@@ -9,7 +10,8 @@ namespace uartdiag {
 
 class Decoder {
 public:
-    bool decode(
+
+    DiagnosticResult decode(
         const std::vector<std::uint8_t>& raw_data,
         Frame& frame
     );
