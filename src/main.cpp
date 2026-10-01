@@ -2,6 +2,7 @@
 #include "uartdiag/diagnostics.hpp"
 #include "uartdiag/frame.hpp"
 #include "uartdiag/hex.hpp"
+#include "uartdiag/logger.hpp"
 #include "uartdiag/report.hpp"
 #include "uartdiag/serial.hpp"
 #include "uartdiag/stream.hpp"
@@ -114,8 +115,8 @@ void print_usage() {
         << "Usage:\n"
         << "  uartdiag --test <type>\n"
         << "  uartdiag --decode \"AA 01 04 10 20 30 40 BC\"\n"
-        << "  uartdiag --serial <port> [baud]\n"
-        << "  uartdiag --simulate [scenario]\n\n"
+        << "  uartdiag --serial <port> [baud] [--log <file>]\n"
+        << "  uartdiag --simulate [scenario] [--log <file>]\n\n"
 
         << "Tests:\n"
         << "  valid     Validate a correct frame\n"
@@ -134,14 +135,18 @@ void print_usage() {
         << "  noise       Noise and resynchronization\n"
         << "  fragmented  Fragmented UART frame\n\n"
 
+        << "Logging:\n"
+        << "  --log <file>  CSV output filename\n"
+        << "  Default simulation log: uartdiag_simulation.csv\n"
+        << "  Default serial log:     uartdiag_serial.csv\n\n"
+
         << "Examples:\n"
         << "  uartdiag --serial COM3\n"
         << "  uartdiag --serial COM3 115200\n"
+        << "  uartdiag --serial COM3 115200 --log session.csv\n"
         << "  uartdiag --simulate\n"
         << "  uartdiag --simulate valid\n"
-        << "  uartdiag --simulate crc\n"
-        << "  uartdiag --simulate noise\n"
-        << "  uartdiag --simulate fragmented\n";
+        << "  uartdiag --simulate crc --log crc_test.csv\n";
 }
 
 uartdiag::DiagnosticReport build_report(
@@ -440,7 +445,8 @@ void print_statistics(
 void process_stream(
     uartdiag::FrameStreamParser& parser,
     SerialStatistics& statistics,
-    std::size_t& frame_number
+    std::size_t& frame_number,
+    uartdiag::DiagnosticLogger* logger = nullptr
 ) {
     std::vector<std::uint8_t> frame;
 
@@ -485,6 +491,22 @@ void process_stream(
                 report
             );
 
+        if (logger != nullptr) {
+
+            std::string log_error;
+
+            if (!logger->write(
+                    report,
+                    log_error
+                )) {
+
+                std::cerr
+                    << "Logging error: "
+                    << log_error
+                    << '\n';
+            }
+        }
+
         std::cout
             << "----------------------------------------\n";
     }
@@ -495,7 +517,8 @@ void push_simulated_data(
     SerialStatistics& statistics,
     std::size_t& frame_number,
     const std::vector<std::uint8_t>& data,
-    const std::string& description
+    const std::string& description,
+    uartdiag::DiagnosticLogger* logger = nullptr
 ) {
     std::cout
         << "\n[SIM] "
@@ -510,13 +533,15 @@ void push_simulated_data(
     process_stream(
         parser,
         statistics,
-        frame_number
+        frame_number,
+        logger
     );
 }
 
 int run_serial(
     const std::string& port,
-    unsigned int baud_rate
+    unsigned int baud_rate,
+    const std::string& log_filename
 ) {
     uartdiag::SerialConfig config;
 
@@ -536,6 +561,25 @@ int run_serial(
             << "Serial error: "
             << error
             << '\n';
+
+        return 1;
+    }
+
+    uartdiag::DiagnosticLogger logger;
+
+    std::string log_error;
+
+    if (!logger.open(
+            log_filename,
+            log_error
+        )) {
+
+        std::cerr
+            << "Logging error: "
+            << log_error
+            << '\n';
+
+        serial.close();
 
         return 1;
     }
@@ -561,6 +605,10 @@ int run_serial(
 
         << "Baud: "
         << config.baud_rate
+        << '\n'
+
+        << "Log:  "
+        << log_filename
         << "\n\n"
 
         << "Listening for UART frames...\n"
@@ -594,6 +642,7 @@ int run_serial(
                 << '\n';
 
             serial.close();
+            logger.close();
 
             return 1;
         }
@@ -608,11 +657,13 @@ int run_serial(
         process_stream(
             parser,
             statistics,
-            frame_number
+            frame_number,
+            &logger
         );
     }
 
     serial.close();
+    logger.close();
 
 #ifdef _WIN32
 
@@ -644,8 +695,9 @@ void print_simulation_header(
         << "========================================\n";
 }
 
-void simulate_valid() {
-
+void simulate_valid(
+    uartdiag::DiagnosticLogger* logger
+) {
     print_simulation_header(
         "VALID FRAME"
     );
@@ -668,14 +720,16 @@ void simulate_valid() {
         statistics,
         frame_number,
         encoded,
-        "Sending valid sensor frame..."
+        "Sending valid sensor frame...",
+        logger
     );
 
     print_statistics(statistics);
 }
 
-void simulate_crc() {
-
+void simulate_crc(
+    uartdiag::DiagnosticLogger* logger
+) {
     print_simulation_header(
         "CRC CORRUPTION"
     );
@@ -700,14 +754,16 @@ void simulate_crc() {
         statistics,
         frame_number,
         encoded,
-        "Sending CRC-corrupted command frame..."
+        "Sending CRC-corrupted command frame...",
+        logger
     );
 
     print_statistics(statistics);
 }
 
-void simulate_noise() {
-
+void simulate_noise(
+    uartdiag::DiagnosticLogger* logger
+) {
     print_simulation_header(
         "NOISE AND RESYNCHRONIZATION"
     );
@@ -739,7 +795,8 @@ void simulate_noise() {
         statistics,
         frame_number,
         noise,
-        "Sending noise containing a fake START byte..."
+        "Sending noise containing a fake START byte...",
+        logger
     );
 
     push_simulated_data(
@@ -747,14 +804,16 @@ void simulate_noise() {
         statistics,
         frame_number,
         encoded,
-        "Sending valid response frame..."
+        "Sending valid response frame...",
+        logger
     );
 
     print_statistics(statistics);
 }
 
-void simulate_fragmented() {
-
+void simulate_fragmented(
+    uartdiag::DiagnosticLogger* logger
+) {
     print_simulation_header(
         "FRAGMENTED FRAME"
     );
@@ -787,7 +846,8 @@ void simulate_fragmented() {
         statistics,
         frame_number,
         first_chunk,
-        "Sending frame chunk 1..."
+        "Sending frame chunk 1...",
+        logger
     );
 
     push_simulated_data(
@@ -795,15 +855,39 @@ void simulate_fragmented() {
         statistics,
         frame_number,
         second_chunk,
-        "Sending frame chunk 2..."
+        "Sending frame chunk 2...",
+        logger
     );
 
     print_statistics(statistics);
 }
 
 int run_simulation(
-    const std::string& scenario
+    const std::string& scenario,
+    const std::string& log_filename
 ) {
+    uartdiag::DiagnosticLogger logger;
+
+    std::string log_error;
+
+    if (!logger.open(
+            log_filename,
+            log_error
+        )) {
+
+        std::cerr
+            << "Logging error: "
+            << log_error
+            << '\n';
+
+        return 1;
+    }
+
+    std::cout
+        << "\nCSV logging enabled: "
+        << log_filename
+        << '\n';
+
     if (
         scenario == "all" ||
         scenario.empty()
@@ -814,36 +898,44 @@ int run_simulation(
             << "========================================\n"
             << "Running all simulation scenarios.\n";
 
-        simulate_valid();
-        simulate_crc();
-        simulate_noise();
-        simulate_fragmented();
+        simulate_valid(&logger);
+        simulate_crc(&logger);
+        simulate_noise(&logger);
+        simulate_fragmented(&logger);
 
         std::cout
             << "\nSimulation suite complete.\n";
+
+        logger.close();
 
         return 0;
     }
 
     if (scenario == "valid") {
-        simulate_valid();
+        simulate_valid(&logger);
+        logger.close();
         return 0;
     }
 
     if (scenario == "crc") {
-        simulate_crc();
+        simulate_crc(&logger);
+        logger.close();
         return 0;
     }
 
     if (scenario == "noise") {
-        simulate_noise();
+        simulate_noise(&logger);
+        logger.close();
         return 0;
     }
 
     if (scenario == "fragmented") {
-        simulate_fragmented();
+        simulate_fragmented(&logger);
+        logger.close();
         return 0;
     }
+
+    logger.close();
 
     std::cerr
         << "Unknown simulation scenario: "
@@ -853,6 +945,43 @@ int run_simulation(
     print_usage();
 
     return 1;
+}
+
+bool parse_log_option(
+    int argc,
+    char* argv[],
+    int start_index,
+    std::string& log_filename
+) {
+    for (
+        int index = start_index;
+        index < argc;
+        ++index
+    ) {
+
+        const std::string argument =
+            argv[index];
+
+        if (argument == "--log") {
+
+            if (index + 1 >= argc) {
+                return false;
+            }
+
+            log_filename =
+                argv[++index];
+
+            if (log_filename.empty()) {
+                return false;
+            }
+
+            continue;
+        }
+
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace
@@ -934,37 +1063,96 @@ int main(
         unsigned int baud_rate =
             115200;
 
-        if (argc >= 4) {
+        int next_argument = 3;
+
+        if (
+            next_argument < argc &&
+            std::string(argv[next_argument]) != "--log"
+        ) {
 
             if (!parse_baud_rate(
-                    argv[3],
+                    argv[next_argument],
                     baud_rate
                 )) {
 
                 std::cerr
                     << "Error: invalid baud rate: "
-                    << argv[3]
+                    << argv[next_argument]
                     << '\n';
 
                 return 1;
             }
+
+            ++next_argument;
+        }
+
+        std::string log_filename =
+            "uartdiag_serial.csv";
+
+        if (!parse_log_option(
+                argc,
+                argv,
+                next_argument,
+                log_filename
+            )) {
+
+            std::cerr
+                << "Error: invalid logging option.\n\n";
+
+            print_usage();
+
+            return 1;
         }
 
         return run_serial(
             port,
-            baud_rate
+            baud_rate,
+            log_filename
         );
     }
 
     if (command == "--simulate") {
 
         const std::string scenario =
-            argc >= 3
+            (
+                argc >= 3 &&
+                std::string(argv[2]) != "--log"
+            )
                 ? argv[2]
                 : "all";
 
+        int next_argument =
+            scenario == "all" &&
+            argc >= 3 &&
+            std::string(argv[2]) == "--log"
+                ? 2
+                : 3;
+
+        if (scenario != "all" || argc < 3) {
+            next_argument = 3;
+        }
+
+        std::string log_filename =
+            "uartdiag_simulation.csv";
+
+        if (!parse_log_option(
+                argc,
+                argv,
+                next_argument,
+                log_filename
+            )) {
+
+            std::cerr
+                << "Error: invalid logging option.\n\n";
+
+            print_usage();
+
+            return 1;
+        }
+
         return run_simulation(
-            scenario
+            scenario,
+            log_filename
         );
     }
 

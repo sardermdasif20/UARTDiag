@@ -17,6 +17,7 @@ add_library(uartdiag_lib
     src/diagnostics.cpp
     src/hex.cpp
     src/report.cpp
+    src/logger.cpp
     src/serial.cpp
     src/stream.cpp
 )
@@ -81,3 +82,15 @@ target_link_libraries(uartdiag_simulation_tests
 )
 
 gtest_discover_tests(uartdiag_simulation_tests)
+
+add_executable(uartdiag_logger_tests
+    tests/test_logger.cpp
+)
+
+target_link_libraries(uartdiag_logger_tests
+    PRIVATE
+        uartdiag_lib
+        GTest::gtest_main
+)
+
+gtest_discover_tests(uartdiag_logger_tests)
