@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -143,6 +144,10 @@ uartdiag::DiagnosticReport build_report(
 
     report.raw_data = raw_data;
 
+    /*
+     * Extract frame metadata when enough bytes are
+     * available to identify the fields.
+     */
     if (raw_data.size() >= 2) {
         const auto type =
             static_cast<uartdiag::FrameType>(
@@ -168,7 +173,15 @@ uartdiag::DiagnosticReport build_report(
             );
     }
 
+    /*
+     * Decode the complete frame.
+     *
+     * DiagnosticResult is the authoritative source
+     * for the diagnostic status, severity and CRC
+     * information.
+     */
     uartdiag::Decoder decoder;
+
     uartdiag::Frame decoded{};
 
     report.result =
@@ -177,6 +190,21 @@ uartdiag::DiagnosticReport build_report(
             decoded
         );
 
+    /*
+     * Populate report data that is available after
+     * decoding.
+     */
+    report.expected_crc =
+        report.result.expected_crc;
+
+    report.received_crc =
+        report.result.received_crc;
+
+    /*
+     * The decoder can recover payload information for
+     * valid frames and CRC failures. Preserve that
+     * information in the report.
+     */
     if (
         report.result.status ==
             uartdiag::DiagnosticStatus::Valid ||
@@ -184,12 +212,6 @@ uartdiag::DiagnosticReport build_report(
             uartdiag::DiagnosticStatus::CrcError
     ) {
         report.payload = decoded.payload;
-
-        report.expected_crc =
-            report.result.expected_crc;
-
-        report.received_crc =
-            report.result.received_crc;
     }
 
     return report;
@@ -275,64 +297,13 @@ int run_test(
 
     print_frame(encoded);
 
-    uartdiag::Decoder decoder;
-    uartdiag::Frame decoded{};
-
-    const auto result =
-        decoder.decode(
-            encoded,
-            decoded
-        );
+    const auto report =
+        build_report(encoded);
 
     std::cout
-        << "\nDiagnostic Result\n"
-        << "-----------------\n"
-        << "Status:   "
-        << uartdiag::to_string(
-            result.status
-        )
-        << '\n'
-        << "Severity: "
-        << uartdiag::to_string(
-            result.severity
-        )
-        << '\n'
-        << "Message:  "
-        << result.message
-        << '\n';
+        << uartdiag::format_report(report);
 
-    if (
-        result.status ==
-        uartdiag::DiagnosticStatus::CrcError
-    ) {
-        std::cout
-            << "Expected CRC: 0x"
-            << std::uppercase
-            << std::hex
-            << std::setw(2)
-            << std::setfill('0')
-            << static_cast<int>(
-                result.expected_crc
-            )
-            << '\n';
-
-        std::cout
-            << "Received CRC: 0x"
-            << std::uppercase
-            << std::hex
-            << std::setw(2)
-            << std::setfill('0')
-            << static_cast<int>(
-                result.received_crc
-            )
-            << std::dec
-            << '\n';
-    }
-
-    std::cout
-        << "========================================\n";
-
-    return result.is_valid()
+    return report.result.is_valid()
         ? 0
         : 1;
 }
@@ -438,20 +409,40 @@ void process_stream(
 
         print_frame(frame);
 
+        /*
+         * Convert the decoded frame and diagnostic
+         * result into one structured report.
+         */
         auto report =
             build_report(frame);
 
+        /*
+         * Add session-specific metadata after the
+         * protocol-level report has been created.
+         */
         report.has_frame_number = true;
         report.frame_number = frame_number;
 
         report.has_timestamp = true;
         report.timestamp = timestamp;
 
+        /*
+         * Record the exact DiagnosticResult in the
+         * session summary.
+         */
         update_statistics(
             report.result,
             statistics
         );
 
+        /*
+         * The same DiagnosticReport is used for:
+         *
+         * 1. Human-readable CLI output
+         * 2. CSV logging
+         *
+         * This keeps both output paths consistent.
+         */
         std::cout
             << uartdiag::format_report(report);
 
