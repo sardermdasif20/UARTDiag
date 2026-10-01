@@ -4,63 +4,15 @@
 
 #include <iomanip>
 #include <iostream>
+#include <string>
+#include <vector>
 
-void print_diagnostic(
-    const uartdiag::DiagnosticResult& result
+namespace {
+
+void print_frame(
+    const std::vector<std::uint8_t>& frame
 ) {
-    std::cout
-        << "\n========================================\n"
-        << "           UART DIAGNOSTIC\n"
-        << "========================================\n";
-
-    std::cout
-        << "Status:        "
-        << uartdiag::to_string(result.status)
-        << '\n';
-
-    std::cout
-        << "Message:       "
-        << result.message
-        << '\n';
-
-    if (result.status == uartdiag::DiagnosticStatus::CrcError) {
-        std::cout
-            << "Expected CRC:  0x"
-            << std::uppercase
-            << std::hex
-            << std::setw(2)
-            << std::setfill('0')
-            << static_cast<int>(result.expected_crc)
-            << '\n';
-
-        std::cout
-            << "Received CRC:  0x"
-            << std::uppercase
-            << std::hex
-            << std::setw(2)
-            << std::setfill('0')
-            << static_cast<int>(result.received_crc)
-            << '\n';
-    }
-
-    std::cout
-        << "========================================\n";
-}
-
-int main() {
-
-    // TEST 1: VALID FRAME
-    uartdiag::Frame original{
-        uartdiag::FrameType::SensorData,
-        {0x10, 0x20, 0x30, 0x40},
-        0
-    };
-
-    auto encoded = uartdiag::encode_frame(original);
-
-    std::cout << "Encoded frame:\n";
-
-    for (const auto byte : encoded) {
+    for (const auto byte : frame) {
         std::cout
             << std::uppercase
             << std::hex
@@ -70,62 +22,171 @@ int main() {
             << ' ';
     }
 
-    std::cout << '\n';
+    std::cout << std::dec << '\n';
+}
+
+void print_usage() {
+
+    std::cout
+        << "UARTDiag - UART Protocol Diagnostic Tool\n\n"
+        << "Usage:\n"
+        << "  uartdiag --test <type>\n\n"
+        << "Tests:\n"
+        << "  valid     Validate a correct frame\n"
+        << "  crc       Inject payload corruption\n"
+        << "  start     Inject invalid start byte\n"
+        << "  length    Inject invalid payload length\n"
+        << "  help      Show this help message\n";
+}
+
+void print_result(
+    const uartdiag::DiagnosticResult& result
+) {
+
+    std::cout
+        << "\nDiagnostic Result\n"
+        << "-----------------\n"
+        << "Status:  "
+        << uartdiag::to_string(result.status)
+        << '\n'
+        << "Message: "
+        << result.message
+        << '\n';
+
+    if (result.status ==
+        uartdiag::DiagnosticStatus::CrcError) {
+
+        std::cout
+            << "Expected CRC: 0x"
+            << std::uppercase
+            << std::hex
+            << std::setw(2)
+            << std::setfill('0')
+            << static_cast<int>(result.expected_crc)
+            << '\n';
+
+        std::cout
+            << "Received CRC: 0x"
+            << std::uppercase
+            << std::hex
+            << std::setw(2)
+            << std::setfill('0')
+            << static_cast<int>(result.received_crc)
+            << '\n';
+
+        std::cout << std::dec;
+    }
+}
+
+int run_test(const std::string& test_name) {
+
+    uartdiag::Frame frame{
+        uartdiag::FrameType::SensorData,
+        {0x10, 0x20, 0x30, 0x40},
+        0
+    };
+
+    auto encoded =
+        uartdiag::encode_frame(frame);
+
+    std::cout
+        << "\nUARTDiag\n"
+        << "========================================\n"
+        << "Test: "
+        << test_name
+        << "\n\n";
+
+    if (test_name == "crc") {
+
+        std::cout
+            << "Fault injected: payload corruption\n";
+
+        encoded[4] ^= 0xFF;
+    }
+    else if (test_name == "start") {
+
+        std::cout
+            << "Fault injected: invalid start byte\n";
+
+        encoded[0] = 0x55;
+    }
+    else if (test_name == "length") {
+
+        std::cout
+            << "Fault injected: invalid payload length\n";
+
+        encoded[2] = 0x20;
+    }
+    else if (test_name != "valid") {
+
+        std::cerr
+            << "Unknown test: "
+            << test_name
+            << "\n\n";
+
+        print_usage();
+
+        return 1;
+    }
+
+    std::cout
+        << "\nFrame:\n";
+
+    print_frame(encoded);
 
     uartdiag::Decoder decoder;
     uartdiag::Frame decoded{};
 
-    auto result = decoder.decode(encoded, decoded);
+    const auto result =
+        decoder.decode(encoded, decoded);
 
-    print_diagnostic(result);
+    print_result(result);
 
+    std::cout
+        << "========================================\n";
 
-    // TEST 2: CRC CORRUPTION
-    std::cout << "\nTesting CRC corruption...\n";
+    return result.is_valid() ? 0 : 1;
+}
 
-    auto corrupted_data = encoded;
-    corrupted_data[4] ^= 0xFF;
+} // namespace
 
-    uartdiag::Frame corrupted{};
+int main(int argc, char* argv[]) {
 
-    auto corrupted_result =
-        decoder.decode(corrupted_data, corrupted);
+    if (argc < 2) {
+        print_usage();
+        return 1;
+    }
 
-    print_diagnostic(corrupted_result);
+    const std::string command = argv[1];
 
+    if (command == "--help" ||
+        command == "-h" ||
+        command == "help") {
 
-    // TEST 3: INVALID START BYTE
-    std::cout << "\nTesting invalid start byte...\n";
+        print_usage();
+        return 0;
+    }
 
-    auto invalid_start = encoded;
-    invalid_start[0] = 0x55;
+    if (command == "--test") {
 
-    uartdiag::Frame invalid_start_frame{};
+        if (argc < 3) {
+            std::cerr
+                << "Error: missing test type.\n\n";
 
-    auto invalid_start_result =
-        decoder.decode(
-            invalid_start,
-            invalid_start_frame
-        );
+            print_usage();
 
-    print_diagnostic(invalid_start_result);
+            return 1;
+        }
 
+        return run_test(argv[2]);
+    }
 
-    // TEST 4: INVALID LENGTH
-    std::cout << "\nTesting invalid length...\n";
+    std::cerr
+        << "Unknown command: "
+        << command
+        << "\n\n";
 
-    auto invalid_length = encoded;
-    invalid_length[2] = 0x20;
+    print_usage();
 
-    uartdiag::Frame invalid_length_frame{};
-
-    auto invalid_length_result =
-        decoder.decode(
-            invalid_length,
-            invalid_length_frame
-        );
-
-    print_diagnostic(invalid_length_result);
-
-    return 0;
+    return 1;
 }
