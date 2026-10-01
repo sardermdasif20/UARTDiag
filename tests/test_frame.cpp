@@ -3,6 +3,7 @@
 #include "uartdiag/diagnostics.hpp"
 #include "uartdiag/frame.hpp"
 #include "uartdiag/hex.hpp"
+#include "uartdiag/report.hpp"
 
 #include <gtest/gtest.h>
 
@@ -280,4 +281,113 @@ TEST(DiagnosticsTest, ErrorResultReportsInvalid) {
     result.status = DiagnosticStatus::CrcError;
 
     EXPECT_FALSE(result.is_valid());
+}
+
+TEST(ReportTest, ValidFrameReportContainsFrameInformation) {
+    const auto raw_data =
+        parse_hex("AA 01 04 10 20 30 40 BC");
+
+    Decoder decoder;
+    Frame decoded{};
+
+    const auto result =
+        decoder.decode(raw_data, decoded);
+
+    ASSERT_TRUE(result.is_valid());
+
+    DiagnosticReport report;
+
+    report.raw_data = raw_data;
+    report.has_frame_type = true;
+    report.frame_type = decoded.type;
+    report.has_payload_length = true;
+    report.payload_length = decoded.payload.size();
+    report.payload = decoded.payload;
+    report.expected_crc = result.expected_crc;
+    report.received_crc = result.received_crc;
+    report.result = result;
+
+    const auto output =
+        format_report(report);
+
+    EXPECT_NE(
+        output.find("UARTDiag Diagnostic Report"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("SENSOR_DATA"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Payload Length: 4"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("10 20 30 40"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("CRC Status:     PASS"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Status:         VALID"),
+        std::string::npos
+    );
+}
+
+TEST(ReportTest, CrcErrorReportShowsFailure) {
+    auto raw_data =
+        parse_hex("AA 01 04 10 20 30 40 72");
+
+    Decoder decoder;
+    Frame decoded{};
+
+    const auto result =
+        decoder.decode(raw_data, decoded);
+
+    ASSERT_EQ(
+        result.status,
+        DiagnosticStatus::CrcError
+    );
+
+    DiagnosticReport report;
+
+    report.raw_data = raw_data;
+    report.has_frame_type = true;
+    report.frame_type = decoded.type;
+    report.has_payload_length = true;
+    report.payload_length = decoded.payload.size();
+    report.payload = decoded.payload;
+    report.expected_crc = result.expected_crc;
+    report.received_crc = result.received_crc;
+    report.result = result;
+
+    const auto output =
+        format_report(report);
+
+    EXPECT_NE(
+        output.find("CRC Status:     FAIL"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Status:         CRC_ERROR"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Expected"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Received"),
+        std::string::npos
+    );
 }

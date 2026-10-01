@@ -2,6 +2,7 @@
 #include "uartdiag/diagnostics.hpp"
 #include "uartdiag/frame.hpp"
 #include "uartdiag/hex.hpp"
+#include "uartdiag/report.hpp"
 
 #include <iomanip>
 #include <iostream>
@@ -59,44 +60,55 @@ void print_usage() {
         << "  help      Show this help message\n";
 }
 
-void print_crc(
-    const uartdiag::DiagnosticResult& result
+uartdiag::DiagnosticReport build_report(
+    const std::vector<std::uint8_t>& raw_data
 ) {
-    std::cout
-        << "\nCRC\n"
-        << "---\n"
-        << "Expected: 0x"
-        << std::uppercase
-        << std::hex
-        << std::setw(2)
-        << std::setfill('0')
-        << static_cast<int>(result.expected_crc)
-        << '\n'
-        << "Received: 0x"
-        << std::uppercase
-        << std::hex
-        << std::setw(2)
-        << std::setfill('0')
-        << static_cast<int>(result.received_crc)
-        << std::dec
-        << '\n';
-}
+    uartdiag::DiagnosticReport report;
 
-void print_result(
-    const uartdiag::DiagnosticResult& result
-) {
-    std::cout
-        << "\nStatus:  "
-        << uartdiag::to_string(result.status)
-        << '\n'
-        << "Message: "
-        << result.message
-        << '\n';
+    report.raw_data = raw_data;
 
-    if (result.status ==
-            uartdiag::DiagnosticStatus::CrcError) {
-        print_crc(result);
+    if (raw_data.size() >= 2) {
+
+        const auto type =
+            static_cast<uartdiag::FrameType>(
+                raw_data[1]
+            );
+
+        if (
+            type == uartdiag::FrameType::SensorData ||
+            type == uartdiag::FrameType::Command ||
+            type == uartdiag::FrameType::Response
+        ) {
+            report.has_frame_type = true;
+            report.frame_type = type;
+        }
     }
+
+    if (raw_data.size() >= 3) {
+
+        report.has_payload_length = true;
+
+        report.payload_length =
+            static_cast<std::size_t>(raw_data[2]);
+    }
+
+    uartdiag::Decoder decoder;
+    uartdiag::Frame decoded{};
+
+    report.result =
+        decoder.decode(raw_data, decoded);
+
+    if (report.result.status ==
+            uartdiag::DiagnosticStatus::Valid ||
+        report.result.status ==
+            uartdiag::DiagnosticStatus::CrcError) {
+
+        report.payload = decoded.payload;
+        report.expected_crc = report.result.expected_crc;
+        report.received_crc = report.result.received_crc;
+    }
+
+    return report;
 }
 
 int run_decode(
@@ -107,91 +119,13 @@ int run_decode(
         const auto raw_data =
             uartdiag::parse_hex(input);
 
-        uartdiag::Decoder decoder;
-        uartdiag::Frame decoded{};
-
-        const auto result =
-            decoder.decode(raw_data, decoded);
+        const auto report =
+            build_report(raw_data);
 
         std::cout
-            << "\nUARTDiag\n"
-            << "========================================\n"
-            << "Input:\n";
+            << uartdiag::format_report(report);
 
-        print_frame(raw_data);
-
-        std::cout
-            << "\nFrame Analysis\n"
-            << "--------------\n";
-
-        if (raw_data.size() >= 2) {
-
-            const auto type =
-                static_cast<uartdiag::FrameType>(
-                    raw_data[1]
-                );
-
-            std::cout
-                << "Frame Type: "
-                << frame_type_to_string(type)
-                << '\n';
-        }
-
-        if (raw_data.size() >= 3) {
-
-            std::cout
-                << "Payload Length: "
-                << static_cast<int>(raw_data[2])
-                << '\n';
-        }
-
-        if (result.status ==
-            uartdiag::DiagnosticStatus::Valid) {
-
-            std::cout
-                << "Payload: ";
-
-            print_frame(decoded.payload);
-
-            print_crc(result);
-        }
-        else if (
-            result.status ==
-            uartdiag::DiagnosticStatus::CrcError) {
-
-            if (raw_data.size() >= 4) {
-
-                const auto payload_length =
-                    static_cast<std::size_t>(
-                        raw_data[2]
-                    );
-
-                if (
-                    raw_data.size() ==
-                    payload_length + 4
-                ) {
-
-                    std::vector<std::uint8_t> payload(
-                        raw_data.begin() + 3,
-                        raw_data.end() - 1
-                    );
-
-                    std::cout
-                        << "Payload: ";
-
-                    print_frame(payload);
-                }
-            }
-
-            print_crc(result);
-        }
-
-        print_result(result);
-
-        std::cout
-            << "========================================\n";
-
-        return result.is_valid() ? 0 : 1;
+        return report.result.is_valid() ? 0 : 1;
 
     }
     catch (const std::exception& error) {
@@ -268,7 +202,39 @@ int run_test(
     const auto result =
         decoder.decode(encoded, decoded);
 
-    print_result(result);
+    std::cout
+        << "\nDiagnostic Result\n"
+        << "-----------------\n"
+        << "Status:  "
+        << uartdiag::to_string(result.status)
+        << '\n'
+        << "Message: "
+        << result.message
+        << '\n';
+
+    if (
+        result.status ==
+        uartdiag::DiagnosticStatus::CrcError
+    ) {
+        std::cout
+            << "Expected CRC: 0x"
+            << std::uppercase
+            << std::hex
+            << std::setw(2)
+            << std::setfill('0')
+            << static_cast<int>(result.expected_crc)
+            << '\n';
+
+        std::cout
+            << "Received CRC: 0x"
+            << std::uppercase
+            << std::hex
+            << std::setw(2)
+            << std::setfill('0')
+            << static_cast<int>(result.received_crc)
+            << std::dec
+            << '\n';
+    }
 
     std::cout
         << "========================================\n";
