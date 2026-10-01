@@ -1,143 +1,109 @@
 <div align="center">
 
-# ⚡ UARTDiag
+# UARTDiag
 
 ### UART Protocol Diagnostics & Fault Analysis
 
-**A professional C++17 tool for UART frame validation, CRC analysis, fault injection, simulation, serial communication, configuration, and diagnostic logging.**
+**A C++17 diagnostic tool for framed UART communication, protocol validation, fault analysis, simulation, and logging.**
 
 <br>
 
-
-
-\
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?style=flat-square\&logo=cplusplus\&logoColor=white)](#)
+[![CMake](https://img.shields.io/badge/CMake-3.20%2B-064F8C?style=flat-square\&logo=cmake\&logoColor=white)](#)
+[![Tests](https://img.shields.io/badge/Tests-90%2F90%20Passing-2da44e?style=flat-square)](#testing)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?style=flat-square\&logo=windows\&logoColor=white)](#)
 
 <br>
 
-**Protocol Engineering · Embedded Systems · Diagnostics · Fault Injection**
+[Features](#features) ·
+[Architecture](#architecture) ·
+[Usage](#usage) ·
+[Testing](#testing) ·
+[Configuration](#configuration)
 
 </div>
 
 ---
 
-# 🚀 What is UARTDiag?
+## Overview
 
-**UARTDiag** is a C++17 diagnostic and fault-analysis tool for framed UART communication.
+UARTDiag is a modular C++17 application for analyzing framed UART communication.
 
-It takes raw UART bytes, reconstructs protocol frames, validates their structure and CRC, detects communication problems, classifies diagnostic severity, and produces structured diagnostic reports.
+It accepts raw byte streams, reconstructs protocol frames, validates their structure and CRC, identifies communication faults, classifies diagnostic results, and records the results for later analysis.
 
-The project also includes:
+The application supports both **software simulation** and **Windows serial communication**, while keeping protocol processing independent from the input source.
 
-* Software UART simulation
-* Fault injection
-* Windows serial communication
-* Stream resynchronization
-* Diagnostic severity classification
-* Diagnostic summary reporting
-* Structured diagnostic reports
-* Session statistics
-* CSV logging
-* External configuration files
-* Automated GoogleTest and CTest testing
-* CLI regression testing
+<div align="center">
 
-The architecture is designed to keep protocol processing independent from the physical communication layer.
+|    90 / 90    |              6              |           2           |
+| :-----------: | :-------------------------: | :-------------------: |
+| Tests passing | Diagnostic error conditions |      Input modes      |
+|     `100%`    |        `INFO → ERROR`       | `Serial + Simulation` |
 
-```text
-Raw UART Data
-      │
-      ▼
-┌──────────────────┐
-│  Stream Parser   │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│  Frame Decoder   │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│  CRC Validation  │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│   Diagnostics    │
-└────────┬─────────┘
-         │
-    ┌────┴─────┐
-    ▼          ▼
- Console       CSV
- Report       Logger
-```
+</div>
 
 ---
 
-# ✨ Features
+## Features
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🔌 Protocol
+### Protocol
 
-* UART-style framed protocol
-* Frame encoding / decoding
+* Binary frame encoding and decoding
 * CRC-8 validation
-* Payload validation
-* Binary data processing
-* Stream synchronization
-* Noise recovery
-* Hex frame decoding
+* Payload and length validation
+* Frame type validation
+* Hexadecimal frame decoding
+* Incremental stream parsing
+* Stream resynchronization
+* Partial-frame handling
+* Noisy input handling
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🧪 Testing
+### Diagnostics
 
-* GoogleTest
-* CTest integration
-* 90 automated tests
-* Parser recovery tests
-* Fault injection tests
-* Simulation tests
-* Logger tests
-* Configuration tests
-* Diagnostic report tests
-* CLI regression tests
+* Structured diagnostic results
+* Severity classification
+* Frame numbering
+* Timestamps
+* Session statistics
+* Diagnostic summaries
+* Structured reports
+* Fault classification
 
 </td>
 </tr>
 
 <tr>
-<td>
+<td width="50%" valign="top">
 
-### 🛠 Diagnostics
+### Input & Simulation
 
-* Structured diagnostic reports
-* Diagnostic severity classification
-* Diagnostic summary reporting
-* CRC error detection
-* Invalid-length detection
-* Unknown-frame detection
-* Frame numbering
-* Timestamps
-* Session statistics
+* Windows serial-port support
+* Software UART simulation
+* Configurable simulation scenarios
+* CRC fault injection
+* Invalid-length scenarios
+* Noise and synchronization scenarios
+* Shared processing pipeline
 
 </td>
-<td>
+<td width="50%" valign="top">
 
-### 📊 Logging & Configuration
+### Logging & Configuration
 
-* CSV diagnostic logs
-* Configurable filenames
-* Simulation logging
-* Serial logging
+* CSV diagnostic logging
+* Configurable log filenames
 * External configuration files
-* Configurable serial read size
-* CLI configuration overrides
-* Persistent diagnostic history
+* Serial configuration
+* Simulation configuration
+* Command-line overrides
+* Configuration validation
 
 </td>
 </tr>
@@ -145,9 +111,9 @@ Raw UART Data
 
 ---
 
-# 📡 Protocol
+## Protocol
 
-UARTDiag uses a simple framed binary protocol:
+UARTDiag uses a compact framed binary protocol.
 
 ```text
 ┌────────┬────────┬────────┬───────────────────┬────────┐
@@ -157,28 +123,23 @@ UARTDiag uses a simple framed binary protocol:
 └────────┴────────┴────────┴───────────────────┴────────┘
 ```
 
-### Frame fields
+### Frame definition
 
-| Field     |     Size    | Description                |
-| --------- | :---------: | -------------------------- |
-| `START`   |    1 byte   | Frame synchronization byte |
-| `TYPE`    |    1 byte   | Message type               |
-| `LENGTH`  |    1 byte   | Payload size               |
-| `PAYLOAD` | 0–255 bytes | Application data           |
-| `CRC`     |    1 byte   | CRC-8 checksum             |
+| Field     |        Size | Description          |
+| --------- | ----------: | -------------------- |
+| `START`   |      1 byte | Synchronization byte |
+| `TYPE`    |      1 byte | Message type         |
+| `LENGTH`  |      1 byte | Payload size         |
+| `PAYLOAD` | 0–255 bytes | Application data     |
+| `CRC`     |      1 byte | CRC-8 checksum       |
 
-### Synchronization
-
-```text
-START = 0xAA
-```
-
-### CRC
+### Protocol parameters
 
 ```text
-Algorithm : CRC-8
-Polynomial: 0x07
-Initial   : 0x00
+START       0xAA
+CRC         CRC-8
+Polynomial  0x07
+Initial     0x00
 ```
 
 ### Example
@@ -187,51 +148,60 @@ Initial   : 0x00
 AA 01 04 10 20 30 40 BC
 ```
 
-Decoded:
-
 ```text
-START   = AA
-TYPE    = 01
-LENGTH  = 04
-PAYLOAD = 10 20 30 40
-CRC     = BC
+START   → AA
+TYPE    → 01
+LENGTH  → 04
+PAYLOAD → 10 20 30 40
+CRC     → BC
 ```
 
 ---
 
-# 🏗 Architecture
+# Architecture
+
+UARTDiag separates communication input from protocol processing.
 
 ```text
                          UARTDiag
                             │
-             ┌──────────────┴──────────────┐
-             │                             │
-       Physical UART                 Simulation
-             │                             │
-             └──────────────┬──────────────┘
+              ┌─────────────┴─────────────┐
+              │                           │
+          Serial                      Simulation
+              │                           │
+              └─────────────┬─────────────┘
+                            │
                             ▼
                     ┌───────────────┐
                     │ Stream Parser │
                     └───────┬───────┘
+                            │
                             ▼
                     ┌───────────────┐
                     │ Frame Decoder │
                     └───────┬───────┘
+                            │
                             ▼
                     ┌───────────────┐
                     │ CRC Validation│
                     └───────┬───────┘
+                            │
                             ▼
                     ┌───────────────┐
                     │  Diagnostics  │
                     └───────┬───────┘
                             │
-                 ┌──────────┴──────────┐
-                 ▼                     ▼
-          Console Report          CSV Logger
+                   ┌────────┴────────┐
+                   │                 │
+                   ▼                 ▼
+              Console Report     CSV Logger
 ```
 
-### Project structure
+The important design principle is that the protocol pipeline does not depend on whether the bytes originated from a real serial device or the simulation layer.
+
+---
+
+## Project Structure
 
 ```text
 UARTDiag/
@@ -283,11 +253,13 @@ UARTDiag/
 
 ---
 
-# 🧪 Simulation
+# Usage
 
-One of the key features of UARTDiag is the ability to reproduce UART problems without physical hardware.
+## Simulation
 
-### Start simulation
+Simulation mode provides deterministic UART input without requiring physical hardware.
+
+### Default simulation
 
 ```powershell
 .\build\uartdiag.exe --simulate
@@ -299,7 +271,7 @@ One of the key features of UARTDiag is the ability to reproduce UART problems wi
 .\build\uartdiag.exe --simulate valid
 ```
 
-### CRC fault
+### CRC error
 
 ```powershell
 .\build\uartdiag.exe --simulate crc
@@ -323,19 +295,17 @@ One of the key features of UARTDiag is the ability to reproduce UART problems wi
 .\build\uartdiag.exe --simulate all
 ```
 
-### Custom simulation log
+### Custom log
 
 ```powershell
 .\build\uartdiag.exe --simulate crc --log crc_test.csv
 ```
 
-Simulation and physical serial input use the same stream-processing architecture.
-
 ---
 
-# 🔌 Serial Mode
+## Serial Mode
 
-UARTDiag can communicate with a real Windows serial port.
+UARTDiag can process data from a Windows serial port.
 
 ### Basic
 
@@ -343,60 +313,48 @@ UARTDiag can communicate with a real Windows serial port.
 .\build\uartdiag.exe --serial COM3
 ```
 
-### Specify baud rate
+### With baud rate
 
 ```powershell
 .\build\uartdiag.exe --serial COM3 115200
 ```
 
-### Serial logging
+### With logging
 
 ```powershell
 .\build\uartdiag.exe --serial COM3 115200 --log session.csv
 ```
 
-The serial input and simulation input eventually use the same processing pipeline:
+Serial data enters the same processing pipeline used by simulation mode:
 
 ```text
-Serial / Simulation
-        │
-        ▼
-   Stream Parser
-        │
-        ▼
-     Decoder
-        │
-        ▼
-   Diagnostics
-        │
-        ├──────────► Console
-        │
-        └──────────► CSV
+Serial
+  │
+  ▼
+Stream Parser
+  │
+  ▼
+Decoder
+  │
+  ▼
+Diagnostics
+  │
+  ├──► Console
+  │
+  └──► CSV
 ```
-
-This keeps the protocol logic independent from the physical communication layer.
 
 ---
 
-# ⚙️ Configuration
+# Configuration
 
-UARTDiag supports an external configuration file using:
+UARTDiag supports external configuration files through:
 
 ```text
 --config <file>
 ```
 
-This allows common runtime settings to be stored separately from the command line.
-
-### Example configuration
-
-Create a file named:
-
-```text
-uartdiag.conf
-```
-
-with:
+Example `uartdiag.conf`:
 
 ```text
 # UARTDiag configuration
@@ -407,38 +365,28 @@ simulation_log=uartdiag_configured.csv
 serial_log=uartdiag_serial_configured.csv
 ```
 
-### Supported settings
+### Available settings
 
-| Key                | Description                                      | Default                   |
-| ------------------ | ------------------------------------------------ | ------------------------- |
-| `baud_rate`        | Default serial baud rate                         | `115200`                  |
-| `serial_read_size` | Number of bytes read from serial input at a time | `256`                     |
-| `simulation_log`   | Default simulation CSV filename                  | `uartdiag_simulation.csv` |
-| `serial_log`       | Default serial CSV filename                      | `uartdiag_serial.csv`     |
+| Setting            | Default                   | Description              |
+| ------------------ | ------------------------- | ------------------------ |
+| `baud_rate`        | `115200`                  | Default serial baud rate |
+| `serial_read_size` | `256`                     | Serial read buffer size  |
+| `simulation_log`   | `uartdiag_simulation.csv` | Simulation log filename  |
+| `serial_log`       | `uartdiag_serial.csv`     | Serial log filename      |
 
-### Use a configuration file
+### Example
 
 ```powershell
 .\build\uartdiag.exe --config uartdiag.conf --simulate valid
 ```
 
-The application reports:
-
-```text
-Configuration loaded: uartdiag.conf
-```
-
-### Configuration with serial mode
+Configuration can also be used with serial mode:
 
 ```powershell
 .\build\uartdiag.exe --config uartdiag.conf --serial COM3
 ```
 
-The configured baud rate and serial read size are used unless explicitly overridden by the command line.
-
-### Command-line override
-
-Explicit command-line options take precedence over configuration defaults.
+Command-line options override configuration defaults.
 
 For example:
 
@@ -446,87 +394,35 @@ For example:
 .\build\uartdiag.exe --config uartdiag.conf --simulate valid --log override.csv
 ```
 
-The configuration file may specify one simulation log filename, but:
-
-```text
---log override.csv
-```
-
-overrides it for that execution.
-
-### Configuration behavior
-
 The configuration parser supports:
 
 * `key=value` syntax
 * Blank lines
-* Comments beginning with `#`
+* `#` comments
 * Whitespace around keys and values
 * Numeric validation
 * Unknown-key detection
 * Invalid-value detection
 * Configuration validation
 
-Invalid configuration files are rejected with a descriptive error message.
-
-Example:
-
-```text
-Configuration error: Could not open configuration file: uartdiag.conf
-```
-
 ---
 
-# 📊 Diagnostic Logging
+# Diagnostics
 
-UARTDiag can persist diagnostic results into CSV files.
+Each processed frame produces a structured diagnostic result.
 
-Example:
+### Diagnostic classification
 
-```powershell
-.\build\uartdiag.exe --simulate valid --log session.csv
-```
+| Condition          | Severity  |
+| ------------------ | --------- |
+| Valid frame        | `INFO`    |
+| Frame too short    | `WARNING` |
+| Invalid start byte | `WARNING` |
+| Unknown frame type | `ERROR`   |
+| Invalid length     | `ERROR`   |
+| CRC error          | `ERROR`   |
 
-Generated CSV structure:
-
-```csv
-timestamp,frame_number,type,payload_length,raw_data,crc_expected,crc_received,status,message,severity
-"2026-10-01 16:24:23",1,"SENSOR_DATA",4,"AA 01 04 10 20 30 40 BC",BC,BC,"VALID","Frame validated successfully.","INFO"
-```
-
-### Logged information
-
-| Field          | Purpose                               |
-| -------------- | ------------------------------------- |
-| Timestamp      | When the frame was processed          |
-| Frame number   | Sequential frame identifier           |
-| Type           | Protocol message type                 |
-| Payload length | Number of payload bytes               |
-| Raw data       | Complete received frame               |
-| Expected CRC   | CRC calculated by UARTDiag            |
-| Received CRC   | CRC contained in frame                |
-| Status         | Diagnostic classification             |
-| Message        | Human-readable diagnostic information |
-| Severity       | Diagnostic severity level             |
-
-### Default filenames
-
-```text
-uartdiag_simulation.csv
-uartdiag_serial.csv
-```
-
-### Custom filename
-
-```powershell
-.\build\uartdiag.exe --simulate crc --log crc_test.csv
-```
-
----
-
-# 🚦 Diagnostic Severity
-
-UARTDiag classifies diagnostic results using severity levels.
+Supported severity levels:
 
 ```text
 INFO
@@ -535,146 +431,182 @@ ERROR
 CRITICAL
 ```
 
-Current protocol diagnostics include classifications such as:
-
-| Diagnostic condition | Severity  |
-| -------------------- | --------- |
-| Valid frame          | `INFO`    |
-| Frame too short      | `WARNING` |
-| Invalid start byte   | `WARNING` |
-| Unknown frame type   | `ERROR`   |
-| Invalid length       | `ERROR`   |
-| CRC error            | `ERROR`   |
-
-Severity is available in:
-
-* Console reports
-* Diagnostic objects
-* CSV logs
-* Session statistics
-
-This makes the diagnostic output more useful when processing large communication sessions.
+`CRITICAL` is available in the diagnostic model for future or higher-level conditions.
 
 ---
 
-# 📈 Session Statistics
+## Diagnostic Reports
 
-UARTDiag tracks session-level statistics while processing input.
+Reports provide a consistent representation of frame-level diagnostic information.
 
-Statistics include:
+A report can contain:
+
+```text
+Frame number
+Timestamp
+Frame type
+Payload length
+Raw frame
+Expected CRC
+Received CRC
+Status
+Diagnostic message
+Severity
+```
+
+This information is available to both the console reporting and CSV logging layers.
+
+---
+
+# Session Statistics
+
+UARTDiag maintains aggregate statistics during a processing session.
 
 ```text
 Frames processed
-
 Valid frames
 Invalid frames
 
-Info diagnostics
-Warning diagnostics
-Error diagnostics
-Critical diagnostics
+INFO diagnostics
+WARNING diagnostics
+ERROR diagnostics
+CRITICAL diagnostics
 
-Valid status
-Frame too short
-Invalid start
-Invalid length
-Unknown type
-CRC error
+Valid frames
+Frame-too-short errors
+Invalid-start errors
+Invalid-length errors
+Unknown-type errors
+CRC errors
 ```
 
-The same statistics system is used for both:
-
-```text
---serial
-```
-
-and:
-
-```text
---simulate
-```
-
-This provides consistent diagnostic behavior across physical and simulated UART input.
+The same statistics model is used by both serial and simulation processing.
 
 ---
 
-# 🧨 Fault Analysis
+# Fault Analysis
 
-UARTDiag is designed not only to process valid communication, but also to identify failures.
-
-### Example diagnostic flow
+The validation pipeline can be summarized as:
 
 ```text
-Incoming Frame
+Incoming Bytes
       │
       ▼
-Is START valid?
-      │
-      ├── NO ──► Resynchronize
+Find START
       │
       ▼
-Is LENGTH valid?
+Read Header
       │
-      ├── NO ──► INVALID_LENGTH
+      ▼
+Validate LENGTH
+      │
+      ▼
+Wait for Complete Frame
       │
       ▼
 Calculate CRC
       │
       ▼
-CRC matches?
-      │
-      ├── NO ──► CRC_ERROR
+Compare CRC
       │
       ▼
-    VALID
+Diagnostic Result
 ```
 
-The project can reproduce faults such as:
+UARTDiag can reproduce and analyze:
 
 * Invalid start bytes
 * CRC corruption
 * Invalid lengths
 * Unknown frame types
-* Stream noise
+* Noise in the stream
 * Partial frames
-* Frame synchronization loss
+* Lost synchronization
 
-This makes the project useful for investigating communication failures rather than simply decoding successful frames.
+The simulation layer makes these conditions reproducible without requiring a physical UART device.
 
 ---
 
-# 🔎 Hex Frame Decoding
+# Logging
 
-UARTDiag also provides a CLI interface for decoding hexadecimal frames.
+Diagnostic results can be written to CSV.
 
-Example:
+```powershell
+.\build\uartdiag.exe --simulate valid --log session.csv
+```
+
+Example CSV structure:
+
+```csv
+timestamp,frame_number,type,payload_length,raw_data,crc_expected,crc_received,status,message,severity
+```
+
+Example record:
+
+```csv
+"2026-10-01 16:24:23",1,"SENSOR_DATA",4,"AA 01 04 10 20 30 40 BC",BC,BC,"VALID","Frame validated successfully.","INFO"
+```
+
+The logger records:
+
+| Field          | Description                 |
+| -------------- | --------------------------- |
+| Timestamp      | Frame processing time       |
+| Frame number   | Sequential frame identifier |
+| Type           | Protocol message type       |
+| Payload length | Payload size                |
+| Raw data       | Complete frame              |
+| Expected CRC   | Calculated CRC              |
+| Received CRC   | CRC from frame              |
+| Status         | Diagnostic status           |
+| Message        | Diagnostic description      |
+| Severity       | Diagnostic severity         |
+
+Default filenames:
+
+```text
+uartdiag_simulation.csv
+uartdiag_serial.csv
+```
+
+---
+
+# Hex Frame Decoding
+
+A captured frame can be analyzed directly from the command line:
 
 ```powershell
 .\build\uartdiag.exe --decode "AA 01 04 10 20 30 40 BC"
 ```
 
-This allows a captured UART frame to be analyzed directly without connecting a physical serial device.
+This provides a convenient way to inspect captured UART traffic without connecting a serial device.
 
 ---
 
-# 🧪 Testing
+# Testing
 
-UARTDiag uses both **GoogleTest** and **CTest**.
+UARTDiag uses **GoogleTest** for component-level testing and **CTest** for test execution and CLI regression testing.
 
-The automated test suite currently contains:
+<div align="center">
 
-```text
-90 tests
-90 passing
-0 failing
-```
+### Test Status
 
-### GoogleTest coverage
+| Metric      |   Result |
+| :---------- | -------: |
+| Total tests |   **90** |
+| Passing     |   **90** |
+| Failing     |    **0** |
+| Pass rate   | **100%** |
+
+</div>
+
+### Test coverage
 
 The test suite covers:
 
 * Frame encoding and decoding
 * CRC calculation
+* Frame validation
 * Diagnostic classification
 * Diagnostic severity
 * Diagnostic summaries
@@ -689,7 +621,7 @@ The test suite covers:
 
 ### CLI regression tests
 
-CTest also runs end-to-end CLI tests:
+CTest also runs the actual executable for:
 
 ```text
 cli_simulate_valid
@@ -697,9 +629,7 @@ cli_simulate_crc
 cli_simulate_all
 ```
 
-These tests execute the actual `uartdiag` executable and verify that the simulation modes run successfully.
-
-### Run the complete test suite
+Run the complete suite:
 
 ```powershell
 ctest --test-dir build --output-on-failure
@@ -711,25 +641,19 @@ Expected result:
 100% tests passed, 0 tests failed out of 90
 ```
 
-<div align="center">
-
-### ✅ 90 / 90 TESTS PASSING
-
-</div>
-
 ---
 
-# 🧰 Build
+# Build
 
 ## Requirements
 
 * Windows
-* C++17 compiler
+* C++17-compatible compiler
 * CMake 3.20+
 * GoogleTest
-* MinGW/MSYS2 or another compatible C++ toolchain
+* MinGW/MSYS2 or another compatible toolchain
 
-The current development environment uses:
+Development environment:
 
 ```text
 Compiler : GCC 16.2.0
@@ -762,210 +686,157 @@ ctest --test-dir build --output-on-failure
 
 ---
 
-# 🧪 Testing Strategy
+# Testing Strategy
 
-The test architecture covers multiple layers of the application.
-
-```text
-┌──────────────────────────────────┐
-│          GoogleTest Suite        │
-├──────────────────────────────────┤
-│                                  │
-│ Frame / CRC                      │
-│ Decoder                          │
-│ Diagnostics                      │
-│ Diagnostic Severity              │
-│ Diagnostic Summary               │
-│ Stream Parser                    │
-│ Simulation                       │
-│ Fault Injection                  │
-│ CSV Logger                       │
-│ Configuration                    │
-│ Diagnostic Reports               │
-│                                  │
-└──────────────────────────────────┘
-
-┌──────────────────────────────────┐
-│          CTest CLI Tests         │
-├──────────────────────────────────┤
-│                                  │
-│ Simulation: valid                │
-│ Simulation: CRC fault            │
-│ Simulation: all scenarios        │
-│                                  │
-└──────────────────────────────────┘
-```
-
-Testing is integrated with CTest:
-
-```powershell
-ctest --test-dir build --output-on-failure
-```
-
-Current automated test count:
+Testing is divided into component-level and executable-level validation.
 
 ```text
-90 tests
-90 passing
-0 failing
+                    UARTDiag
+                       │
+              ┌────────┴────────┐
+              │                 │
+         Unit Tests          CLI Tests
+              │                 │
+              ▼                 ▼
+        GoogleTest             CTest
+              │                 │
+     ┌────────┼────────┐        │
+     │        │        │        │
+   Frame   Stream   Config   Simulation
+   CRC     Parser   Logger   Scenarios
+   Decoder Reports  Reports  End-to-End
 ```
 
-The test suite verifies both normal operation and failure conditions.
+This provides coverage from individual protocol components through complete CLI execution.
 
 ---
 
-# 💻 Technology Stack
+# Technology Stack
 
-| Technology       | Usage                  |
-| ---------------- | ---------------------- |
-| **C++17**        | Core implementation    |
-| **CMake**        | Build system           |
-| **GoogleTest**   | Unit testing           |
-| **CTest**        | Test execution         |
-| **GCC / MinGW**  | Compiler               |
-| **Windows API**  | Serial communication   |
-| **CSV**          | Diagnostic persistence |
-| **Git / GitHub** | Version control        |
+<table>
+<tr>
+<td><strong>Language</strong></td>
+<td>C++17</td>
+</tr>
+<tr>
+<td><strong>Build System</strong></td>
+<td>CMake</td>
+</tr>
+<tr>
+<td><strong>Testing</strong></td>
+<td>GoogleTest + CTest</td>
+</tr>
+<tr>
+<td><strong>Compiler</strong></td>
+<td>GCC / MinGW</td>
+</tr>
+<tr>
+<td><strong>Serial Communication</strong></td>
+<td>Windows API</td>
+</tr>
+<tr>
+<td><strong>Logging</strong></td>
+<td>CSV</td>
+</tr>
+<tr>
+<td><strong>Version Control</strong></td>
+<td>Git / GitHub</td>
+</tr>
+</table>
 
 ---
 
-# 🎯 Engineering Concepts Demonstrated
+# Engineering Focus
 
-This project focuses on practical engineering skills:
+UARTDiag demonstrates practical experience with:
 
 ```text
-C++
-
-├── Object-Oriented Design
+C++17
+├── Modular design
 ├── RAII
 ├── STL
-├── Binary Data Processing
-├── Error Handling
-│
-├── Embedded Concepts
-│   ├── UART
-│   ├── Framing
-│   ├── CRC
-│   └── Stream Parsing
-│
-├── Software Engineering
-│   ├── CMake
-│   ├── Unit Testing
-│   ├── Modular Architecture
-│   ├── Configuration Management
-│   └── Git
-│
-└── Diagnostics
-    ├── Fault Injection
-    ├── Simulation
-    ├── Severity Classification
-    ├── Structured Reports
-    ├── Session Statistics
-    └── Persistent Logging
+├── Error handling
+└── Binary data processing
+
+Embedded / Protocols
+├── UART
+├── Framing
+├── CRC
+└── Stream parsing
+
+Software Engineering
+├── CMake
+├── Unit testing
+├── Integration testing
+├── Configuration management
+└── Git
+
+Diagnostics
+├── Fault injection
+├── Simulation
+├── Severity classification
+├── Reporting
+├── Statistics
+└── Persistent logging
 ```
 
----
-
-# 🛣 Roadmap
-
-Potential future improvements:
-
-* [ ] Linux serial-port support
-* [ ] Cross-platform serial abstraction
-* [ ] Configurable protocol definitions
-* [ ] Additional CRC algorithms
-* [ ] JSON diagnostic reports
-* [ ] Real-time terminal visualization
-* [ ] Log rotation
-* [ ] Configurable logging levels
-* [ ] Performance benchmarking
-* [ ] Hardware-in-the-loop testing
+The main design goal is separation of responsibilities: communication input, protocol parsing, diagnostics, reporting, and persistence are implemented as distinct components.
 
 ---
 
-# 📌 Project Status
+# Project Status
 
-<div align="center">
-
-| Component              | Status |
-| ---------------------- | :----: |
-| Protocol framing       |    ✅   |
-| CRC validation         |    ✅   |
-| Frame decoder          |    ✅   |
-| Hex frame decoding     |    ✅   |
-| Stream parser          |    ✅   |
-| Diagnostics            |    ✅   |
-| Diagnostic severity    |    ✅   |
-| Diagnostic summaries   |    ✅   |
-| Structured reports     |    ✅   |
-| Fault injection        |    ✅   |
-| Automated testing      |    ✅   |
-| CLI regression testing |    ✅   |
-| Windows serial support |    ✅   |
-| UART simulation        |    ✅   |
-| CSV logging            |    ✅   |
-| Session statistics     |    ✅   |
-| External configuration |    ✅   |
-| Configurable logging   |    ✅   |
-
-<br>
-
-**UARTDiag is a tested embedded/protocol diagnostics portfolio project.**
-
-</div>
+| Component                |        Status       |
+| ------------------------ | :-----------------: |
+| Protocol framing         |       Complete      |
+| CRC validation           |       Complete      |
+| Frame decoder            |       Complete      |
+| Hex frame decoding       |       Complete      |
+| Stream parser            |       Complete      |
+| Stream resynchronization |       Complete      |
+| Diagnostics              |       Complete      |
+| Diagnostic severity      |       Complete      |
+| Diagnostic summaries     |       Complete      |
+| Structured reports       |       Complete      |
+| Fault injection          |       Complete      |
+| UART simulation          |       Complete      |
+| Windows serial support   |       Complete      |
+| CSV logging              |       Complete      |
+| Session statistics       |       Complete      |
+| External configuration   |       Complete      |
+| CLI regression tests     |       Complete      |
+| Automated tests          | **90 / 90 passing** |
 
 ---
 
-# 👨‍💻 Why This Project?
+# Future Work
 
-UARTDiag was built to demonstrate how low-level communication problems can be approached using structured software engineering techniques.
+Potential extensions include:
 
-Instead of treating UART communication as a simple byte stream, the project provides:
+* Linux serial-port support
+* Cross-platform serial abstraction
+* Configurable protocol definitions
+* Additional CRC algorithms
+* JSON diagnostic output
+* Log rotation
+* Performance benchmarking
+* Hardware-in-the-loop testing
+* Additional protocol fault models
 
-```text
-RAW DATA
+---
 
-   ↓
+# License
 
-PROTOCOL PARSING
-
-   ↓
-
-VALIDATION
-
-   ↓
-
-FAULT DETECTION
-
-   ↓
-
-SEVERITY CLASSIFICATION
-
-   ↓
-
-DIAGNOSTIC REPORT
-
-   ↓
-
-SESSION SUMMARY
-
-   ↓
-
-PERSISTENT LOG
-```
-
-The goal is to combine **embedded-systems concepts with modern C++ engineering practices**.
-
-The project demonstrates a complete path from raw communication data to structured, testable, and persistent diagnostic information.
+This project is licensed under the terms provided in [`LICENSE`](LICENSE).
 
 ---
 
 <div align="center">
 
-### ⚡ UARTDiag
+## UARTDiag
 
 **UART Protocol Diagnostics & Fault Analysis**
 
-Built with C++17 · CMake · GoogleTest · CTest
+C++17 · CMake · GoogleTest · CTest
 
 </div>
