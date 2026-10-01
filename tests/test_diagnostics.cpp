@@ -1,4 +1,5 @@
 #include "uartdiag/decoder.hpp"
+#include "uartdiag/diagnostics.hpp"
 #include "uartdiag/frame.hpp"
 
 #include <cstdint>
@@ -218,6 +219,315 @@ TEST(DiagnosticSeverityTest, CrcErrorIsError) {
 
     EXPECT_FALSE(
         result.is_valid()
+    );
+}
+
+TEST(DiagnosticSummaryTest, StartsEmpty) {
+
+    const uartdiag::DiagnosticSummary summary{};
+
+    EXPECT_EQ(
+        summary.frames_processed,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.valid_frames,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_frames,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.info_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.warning_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.error_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.critical_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.valid_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.frame_too_short_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_start_byte_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_length_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.unknown_frame_type_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.crc_error_count,
+        0u
+    );
+}
+
+TEST(DiagnosticSummaryTest, RecordsValidFrame) {
+
+    uartdiag::DiagnosticSummary summary{};
+
+    const uartdiag::DiagnosticResult result{
+        uartdiag::DiagnosticStatus::Valid,
+        uartdiag::DiagnosticSeverity::Info,
+        0xBC,
+        0xBC,
+        "Frame validated successfully."
+    };
+
+    summary.record(result);
+
+    EXPECT_EQ(
+        summary.frames_processed,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.valid_frames,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_frames,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.info_count,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.valid_count,
+        1u
+    );
+}
+
+TEST(DiagnosticSummaryTest, RecordsWarningFrame) {
+
+    uartdiag::DiagnosticSummary summary{};
+
+    const uartdiag::DiagnosticResult result{
+        uartdiag::DiagnosticStatus::FrameTooShort,
+        uartdiag::DiagnosticSeverity::Warning,
+        0,
+        0,
+        "Frame is too short."
+    };
+
+    summary.record(result);
+
+    EXPECT_EQ(
+        summary.frames_processed,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.valid_frames,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_frames,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.warning_count,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.frame_too_short_count,
+        1u
+    );
+}
+
+TEST(DiagnosticSummaryTest, RecordsErrorFrame) {
+
+    uartdiag::DiagnosticSummary summary{};
+
+    const uartdiag::DiagnosticResult result{
+        uartdiag::DiagnosticStatus::CrcError,
+        uartdiag::DiagnosticSeverity::Error,
+        0xBC,
+        0x00,
+        "CRC validation failed."
+    };
+
+    summary.record(result);
+
+    EXPECT_EQ(
+        summary.frames_processed,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.valid_frames,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_frames,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.error_count,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.crc_error_count,
+        1u
+    );
+}
+
+TEST(DiagnosticSummaryTest, RecordsMultipleDiagnosticResults) {
+
+    uartdiag::DiagnosticSummary summary{};
+
+    const uartdiag::DiagnosticResult valid_result{
+        uartdiag::DiagnosticStatus::Valid,
+        uartdiag::DiagnosticSeverity::Info,
+        0xBC,
+        0xBC,
+        "Frame validated successfully."
+    };
+
+    const uartdiag::DiagnosticResult warning_result{
+        uartdiag::DiagnosticStatus::InvalidStartByte,
+        uartdiag::DiagnosticSeverity::Warning,
+        0,
+        0,
+        "Invalid start byte."
+    };
+
+    const uartdiag::DiagnosticResult error_result{
+        uartdiag::DiagnosticStatus::CrcError,
+        uartdiag::DiagnosticSeverity::Error,
+        0xBC,
+        0x00,
+        "CRC validation failed."
+    };
+
+    summary.record(valid_result);
+    summary.record(valid_result);
+    summary.record(warning_result);
+    summary.record(error_result);
+
+    EXPECT_EQ(
+        summary.frames_processed,
+        4u
+    );
+
+    EXPECT_EQ(
+        summary.valid_frames,
+        2u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_frames,
+        2u
+    );
+
+    EXPECT_EQ(
+        summary.info_count,
+        2u
+    );
+
+    EXPECT_EQ(
+        summary.warning_count,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.error_count,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.critical_count,
+        0u
+    );
+
+    EXPECT_EQ(
+        summary.valid_count,
+        2u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_start_byte_count,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.crc_error_count,
+        1u
+    );
+}
+
+TEST(DiagnosticSummaryTest, RecordsCriticalSeverity) {
+
+    uartdiag::DiagnosticSummary summary{};
+
+    const uartdiag::DiagnosticResult result{
+        uartdiag::DiagnosticStatus::InvalidLength,
+        uartdiag::DiagnosticSeverity::Critical,
+        0,
+        0,
+        "Critical diagnostic condition."
+    };
+
+    summary.record(result);
+
+    EXPECT_EQ(
+        summary.frames_processed,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_frames,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.critical_count,
+        1u
+    );
+
+    EXPECT_EQ(
+        summary.invalid_length_count,
+        1u
     );
 }
 

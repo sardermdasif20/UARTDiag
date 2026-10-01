@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -34,6 +35,29 @@ struct DiagnosticResult {
     std::string message;
 
     bool is_valid() const;
+};
+
+struct DiagnosticSummary {
+    std::size_t frames_processed{0};
+
+    std::size_t valid_frames{0};
+    std::size_t invalid_frames{0};
+
+    std::size_t info_count{0};
+    std::size_t warning_count{0};
+    std::size_t error_count{0};
+    std::size_t critical_count{0};
+
+    std::size_t valid_count{0};
+    std::size_t frame_too_short_count{0};
+    std::size_t invalid_start_byte_count{0};
+    std::size_t invalid_length_count{0};
+    std::size_t unknown_frame_type_count{0};
+    std::size_t crc_error_count{0};
+
+    void record(
+        const DiagnosticResult& result
+    );
 };
 
 std::string to_string(

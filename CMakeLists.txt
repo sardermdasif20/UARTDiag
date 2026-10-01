@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(UARTDiag
+project(
+    UARTDiag
     VERSION 1.0.0
     DESCRIPTION "UART protocol diagnostics and fault analysis tool"
     LANGUAGES CXX
@@ -10,7 +11,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(uartdiag_lib
+add_library(
+    uartdiag_lib
     src/frame.cpp
     src/crc.cpp
     src/decoder.cpp
@@ -23,27 +25,41 @@ add_library(uartdiag_lib
     src/config.cpp
 )
 
-target_include_directories(uartdiag_lib
+target_include_directories(
+    uartdiag_lib
     PUBLIC
-        ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include
 )
 
 if (MSVC)
-    target_compile_options(uartdiag_lib PRIVATE /W4)
+
+    target_compile_options(
+        uartdiag_lib
+        PRIVATE
+        /W4
+    )
+
 else()
-    target_compile_options(uartdiag_lib PRIVATE
+
+    target_compile_options(
+        uartdiag_lib
+        PRIVATE
         -Wall
         -Wextra
         -Wpedantic
     )
+
 endif()
 
-add_executable(uartdiag
+add_executable(
+    uartdiag
     src/main.cpp
 )
 
-target_link_libraries(uartdiag
-    PRIVATE uartdiag_lib
+target_link_libraries(
+    uartdiag
+    PRIVATE
+    uartdiag_lib
 )
 
 enable_testing()
@@ -58,64 +74,100 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(googletest)
 
-add_executable(uartdiag_tests
+add_executable(
+    uartdiag_tests
     tests/test_frame.cpp
 )
 
-target_link_libraries(uartdiag_tests
+target_link_libraries(
+    uartdiag_tests
     PRIVATE
-        uartdiag_lib
-        GTest::gtest_main
+    uartdiag_lib
+    GTest::gtest_main
 )
 
 include(GoogleTest)
 
-gtest_discover_tests(uartdiag_tests)
+gtest_discover_tests(
+    uartdiag_tests
+)
 
-add_executable(uartdiag_simulation_tests
+add_executable(
+    uartdiag_simulation_tests
     tests/test_simulation.cpp
 )
 
-target_link_libraries(uartdiag_simulation_tests
+target_link_libraries(
+    uartdiag_simulation_tests
     PRIVATE
-        uartdiag_lib
-        GTest::gtest_main
+    uartdiag_lib
+    GTest::gtest_main
 )
 
-gtest_discover_tests(uartdiag_simulation_tests)
+gtest_discover_tests(
+    uartdiag_simulation_tests
+)
 
-add_executable(uartdiag_logger_tests
+add_executable(
+    uartdiag_logger_tests
     tests/test_logger.cpp
 )
 
-target_link_libraries(uartdiag_logger_tests
+target_link_libraries(
+    uartdiag_logger_tests
     PRIVATE
-        uartdiag_lib
-        GTest::gtest_main
+    uartdiag_lib
+    GTest::gtest_main
 )
 
-gtest_discover_tests(uartdiag_logger_tests)
+gtest_discover_tests(
+    uartdiag_logger_tests
+)
 
-add_executable(uartdiag_diagnostics_tests
+add_executable(
+    uartdiag_diagnostics_tests
     tests/test_diagnostics.cpp
 )
 
-target_link_libraries(uartdiag_diagnostics_tests
+target_link_libraries(
+    uartdiag_diagnostics_tests
     PRIVATE
-        uartdiag_lib
-        GTest::gtest_main
+    uartdiag_lib
+    GTest::gtest_main
 )
 
-gtest_discover_tests(uartdiag_diagnostics_tests)
+gtest_discover_tests(
+    uartdiag_diagnostics_tests
+)
 
-add_executable(uartdiag_config_tests
+add_executable(
+    uartdiag_config_tests
     tests/test_config.cpp
 )
 
-target_link_libraries(uartdiag_config_tests
+target_link_libraries(
+    uartdiag_config_tests
     PRIVATE
-        uartdiag_lib
-        GTest::gtest_main
+    uartdiag_lib
+    GTest::gtest_main
 )
 
-gtest_discover_tests(uartdiag_config_tests)
+gtest_discover_tests(
+    uartdiag_config_tests
+)
+
+add_executable(
+    uartdiag_report_tests
+    tests/test_report.cpp
+)
+
+target_link_libraries(
+    uartdiag_report_tests
+    PRIVATE
+    uartdiag_lib
+    GTest::gtest_main
+)
+
+gtest_discover_tests(
+    uartdiag_report_tests
+)

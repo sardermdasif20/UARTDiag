@@ -6,6 +6,65 @@ bool DiagnosticResult::is_valid() const {
     return status == DiagnosticStatus::Valid;
 }
 
+void DiagnosticSummary::record(
+    const DiagnosticResult& result
+) {
+    ++frames_processed;
+
+    if (result.is_valid()) {
+        ++valid_frames;
+    }
+    else {
+        ++invalid_frames;
+    }
+
+    switch (result.severity) {
+
+        case DiagnosticSeverity::Info:
+            ++info_count;
+            break;
+
+        case DiagnosticSeverity::Warning:
+            ++warning_count;
+            break;
+
+        case DiagnosticSeverity::Error:
+            ++error_count;
+            break;
+
+        case DiagnosticSeverity::Critical:
+            ++critical_count;
+            break;
+    }
+
+    switch (result.status) {
+
+        case DiagnosticStatus::Valid:
+            ++valid_count;
+            break;
+
+        case DiagnosticStatus::FrameTooShort:
+            ++frame_too_short_count;
+            break;
+
+        case DiagnosticStatus::InvalidStartByte:
+            ++invalid_start_byte_count;
+            break;
+
+        case DiagnosticStatus::InvalidLength:
+            ++invalid_length_count;
+            break;
+
+        case DiagnosticStatus::UnknownFrameType:
+            ++unknown_frame_type_count;
+            break;
+
+        case DiagnosticStatus::CrcError:
+            ++crc_error_count;
+            break;
+    }
+}
+
 std::string to_string(
     DiagnosticStatus status
 ) {

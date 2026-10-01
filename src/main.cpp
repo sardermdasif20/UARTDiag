@@ -27,15 +27,8 @@ std::atomic<bool> g_running{true};
 
 struct SerialStatistics {
     std::size_t bytes_received{0};
-    std::size_t frames_received{0};
-    std::size_t valid_frames{0};
-    std::size_t crc_errors{0};
-    std::size_t invalid_frames{0};
 
-    std::size_t info_count{0};
-    std::size_t warning_count{0};
-    std::size_t error_count{0};
-    std::size_t critical_count{0};
+    uartdiag::DiagnosticSummary summary;
 };
 
 #ifdef _WIN32
@@ -375,45 +368,15 @@ void update_statistics(
     const uartdiag::DiagnosticResult& result,
     SerialStatistics& statistics
 ) {
-    ++statistics.frames_received;
-
-    switch (result.severity) {
-        case uartdiag::DiagnosticSeverity::Info:
-            ++statistics.info_count;
-            break;
-
-        case uartdiag::DiagnosticSeverity::Warning:
-            ++statistics.warning_count;
-            break;
-
-        case uartdiag::DiagnosticSeverity::Error:
-            ++statistics.error_count;
-            break;
-
-        case uartdiag::DiagnosticSeverity::Critical:
-            ++statistics.critical_count;
-            break;
-    }
-
-    if (result.is_valid()) {
-        ++statistics.valid_frames;
-        return;
-    }
-
-    if (
-        result.status ==
-        uartdiag::DiagnosticStatus::CrcError
-    ) {
-        ++statistics.crc_errors;
-        return;
-    }
-
-    ++statistics.invalid_frames;
+    statistics.summary.record(result);
 }
 
 void print_statistics(
     const SerialStatistics& statistics
 ) {
+    const auto& summary =
+        statistics.summary;
+
     std::cout
         << "\nSession Statistics\n"
         << "------------------\n"
@@ -421,30 +384,30 @@ void print_statistics(
         << statistics.bytes_received
         << '\n'
         << "Frames received: "
-        << statistics.frames_received
+        << summary.frames_processed
         << '\n'
         << "Valid frames:    "
-        << statistics.valid_frames
+        << summary.valid_frames
         << '\n'
         << "CRC errors:      "
-        << statistics.crc_errors
+        << summary.crc_error_count
         << '\n'
         << "Invalid frames:  "
-        << statistics.invalid_frames
+        << summary.invalid_frames
         << '\n'
         << "\nSeverity Summary\n"
         << "----------------\n"
         << "INFO:             "
-        << statistics.info_count
+        << summary.info_count
         << '\n'
         << "WARNING:          "
-        << statistics.warning_count
+        << summary.warning_count
         << '\n'
         << "ERROR:            "
-        << statistics.error_count
+        << summary.error_count
         << '\n'
         << "CRITICAL:         "
-        << statistics.critical_count
+        << summary.critical_count
         << '\n';
 }
 
