@@ -15,6 +15,7 @@ add_library(uartdiag_lib
     src/crc.cpp
     src/decoder.cpp
     src/diagnostics.cpp
+    src/hex.cpp
 )
 
 target_include_directories(uartdiag_lib

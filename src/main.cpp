@@ -1,6 +1,7 @@
 #include "uartdiag/decoder.hpp"
 #include "uartdiag/diagnostics.hpp"
 #include "uartdiag/frame.hpp"
+#include "uartdiag/hex.hpp"
 
 #include <iomanip>
 #include <iostream>
@@ -30,7 +31,8 @@ void print_usage() {
     std::cout
         << "UARTDiag - UART Protocol Diagnostic Tool\n\n"
         << "Usage:\n"
-        << "  uartdiag --test <type>\n\n"
+        << "  uartdiag --test <type>\n"
+        << "  uartdiag --decode \"AA 01 04 10 20 30 40 BC\"\n\n"
         << "Tests:\n"
         << "  valid     Validate a correct frame\n"
         << "  crc       Inject payload corruption\n"
@@ -75,6 +77,101 @@ void print_result(
             << '\n';
 
         std::cout << std::dec;
+    }
+}
+
+int run_decode(const std::string& input) {
+
+    try {
+
+        const auto raw_data =
+            uartdiag::parse_hex(input);
+
+        uartdiag::Decoder decoder;
+        uartdiag::Frame decoded{};
+
+        const auto result =
+            decoder.decode(raw_data, decoded);
+
+        std::cout
+            << "\nUARTDiag\n"
+            << "========================================\n"
+            << "Input:\n";
+
+        print_frame(raw_data);
+
+        std::cout
+            << "\nDiagnostic Result\n"
+            << "-----------------\n"
+            << "Status:  "
+            << uartdiag::to_string(result.status)
+            << '\n'
+            << "Message: "
+            << result.message
+            << '\n';
+
+        if (result.status ==
+            uartdiag::DiagnosticStatus::Valid) {
+
+            std::cout
+                << "\nFrame Type: ";
+
+            switch (decoded.type) {
+
+                case uartdiag::FrameType::SensorData:
+                    std::cout << "SENSOR_DATA";
+                    break;
+
+                case uartdiag::FrameType::Command:
+                    std::cout << "COMMAND";
+                    break;
+
+                case uartdiag::FrameType::Response:
+                    std::cout << "RESPONSE";
+                    break;
+            }
+
+            std::cout
+                << "\nPayload Length: "
+                << decoded.payload.size()
+                << "\nPayload: ";
+
+            print_frame(decoded.payload);
+
+            std::cout
+                << "Received CRC: 0x"
+                << std::uppercase
+                << std::hex
+                << std::setw(2)
+                << std::setfill('0')
+                << static_cast<int>(decoded.crc)
+                << std::dec
+                << '\n';
+
+            std::cout
+                << "Expected CRC: 0x"
+                << std::uppercase
+                << std::hex
+                << std::setw(2)
+                << std::setfill('0')
+                << static_cast<int>(result.expected_crc)
+                << std::dec
+                << '\n';
+        }
+
+        std::cout
+            << "========================================\n";
+
+        return result.is_valid() ? 0 : 1;
+
+    } catch (const std::exception& error) {
+
+        std::cerr
+            << "Error: "
+            << error.what()
+            << '\n';
+
+        return 1;
     }
 }
 
@@ -179,6 +276,20 @@ int main(int argc, char* argv[]) {
         }
 
         return run_test(argv[2]);
+    }
+
+    if (command == "--decode") {
+
+        if (argc < 3) {
+            std::cerr
+                << "Error: missing hexadecimal frame.\n\n";
+
+            print_usage();
+
+            return 1;
+        }
+
+        return run_decode(argv[2]);
     }
 
     std::cerr
