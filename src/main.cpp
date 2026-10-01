@@ -1,3 +1,4 @@
+#include "uartdiag/config.hpp"
 #include "uartdiag/decoder.hpp"
 #include "uartdiag/diagnostics.hpp"
 #include "uartdiag/frame.hpp"
@@ -38,18 +39,13 @@ struct SerialStatistics {
 };
 
 #ifdef _WIN32
-
-BOOL WINAPI console_ctrl_handler(
-    DWORD signal
-) {
+BOOL WINAPI console_ctrl_handler(DWORD signal) {
     switch (signal) {
-
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
         case CTRL_LOGOFF_EVENT:
         case CTRL_SHUTDOWN_EVENT:
-
             g_running = false;
             return TRUE;
 
@@ -64,11 +60,9 @@ bool install_console_handler() {
         TRUE
     ) != 0;
 }
-
 #endif
 
 std::string current_timestamp() {
-
     const auto now =
         std::chrono::system_clock::now();
 
@@ -97,7 +91,6 @@ void print_frame(
     const std::vector<std::uint8_t>& frame
 ) {
     for (const auto byte : frame) {
-
         std::cout
             << std::uppercase
             << std::hex
@@ -113,45 +106,41 @@ void print_frame(
 }
 
 void print_usage() {
-
     std::cout
         << "UARTDiag - UART Protocol Diagnostic Tool\n\n"
-
         << "Usage:\n"
-        << "  uartdiag --test <type>\n"
-        << "  uartdiag --decode \"AA 01 04 10 20 30 40 BC\"\n"
-        << "  uartdiag --serial <port> [baud] [--log <file>]\n"
-        << "  uartdiag --simulate [scenario] [--log <file>]\n\n"
-
+        << "  uartdiag [--config <file>] --test <type>\n"
+        << "  uartdiag [--config <file>] --decode \"AA 01 04 10 20 30 40 BC\"\n"
+        << "  uartdiag [--config <file>] --serial <port> [baud] [--log <file>]\n"
+        << "  uartdiag [--config <file>] --simulate [scenario] [--log <file>]\n\n"
         << "Tests:\n"
         << "  valid     Validate a correct frame\n"
         << "  crc       Inject payload corruption\n"
         << "  start     Inject invalid start byte\n"
         << "  length    Inject invalid payload length\n\n"
-
         << "Serial:\n"
         << "  port      COM port, for example COM3\n"
         << "  baud      Baud rate, default is 115200\n\n"
-
         << "Simulation:\n"
         << "  all         Run all simulation scenarios\n"
         << "  valid       Valid frame\n"
         << "  crc         CRC corruption\n"
         << "  noise       Noise and resynchronization\n"
         << "  fragmented  Fragmented UART frame\n\n"
-
         << "Logging:\n"
         << "  --log <file>  CSV output filename\n"
         << "  Default simulation log: uartdiag_simulation.csv\n"
         << "  Default serial log:     uartdiag_serial.csv\n\n"
-
+        << "Configuration:\n"
+        << "  --config <file>  Load settings from configuration file\n\n"
         << "Examples:\n"
         << "  uartdiag --serial COM3\n"
         << "  uartdiag --serial COM3 115200\n"
         << "  uartdiag --serial COM3 115200 --log session.csv\n"
         << "  uartdiag --simulate\n"
         << "  uartdiag --simulate valid\n"
-        << "  uartdiag --simulate crc --log crc_test.csv\n";
+        << "  uartdiag --simulate crc --log crc_test.csv\n"
+        << "  uartdiag --config uartdiag.conf --simulate\n";
 }
 
 uartdiag::DiagnosticReport build_report(
@@ -162,7 +151,6 @@ uartdiag::DiagnosticReport build_report(
     report.raw_data = raw_data;
 
     if (raw_data.size() >= 2) {
-
         const auto type =
             static_cast<uartdiag::FrameType>(
                 raw_data[1]
@@ -179,7 +167,6 @@ uartdiag::DiagnosticReport build_report(
     }
 
     if (raw_data.size() >= 3) {
-
         report.has_payload_length = true;
 
         report.payload_length =
@@ -203,9 +190,7 @@ uartdiag::DiagnosticReport build_report(
         report.result.status ==
             uartdiag::DiagnosticStatus::CrcError
     ) {
-
-        report.payload =
-            decoded.payload;
+        report.payload = decoded.payload;
 
         report.expected_crc =
             report.result.expected_crc;
@@ -221,7 +206,6 @@ int run_decode(
     const std::string& input
 ) {
     try {
-
         const auto raw_data =
             uartdiag::parse_hex(input);
 
@@ -229,16 +213,13 @@ int run_decode(
             build_report(raw_data);
 
         std::cout
-            << uartdiag::format_report(
-                report
-            );
+            << uartdiag::format_report(report);
 
         return report.result.is_valid()
             ? 0
             : 1;
     }
     catch (const std::exception& error) {
-
         std::cerr
             << "Error: "
             << error.what()
@@ -268,28 +249,24 @@ int run_test(
         << "\n\n";
 
     if (test_name == "crc") {
-
         std::cout
             << "Fault injected: payload corruption\n";
 
         encoded[4] ^= 0xFF;
     }
     else if (test_name == "start") {
-
         std::cout
             << "Fault injected: invalid start byte\n";
 
         encoded[0] = 0x55;
     }
     else if (test_name == "length") {
-
         std::cout
             << "Fault injected: invalid payload length\n";
 
         encoded[2] = 0x20;
     }
     else if (test_name != "valid") {
-
         std::cerr
             << "Unknown test: "
             << test_name
@@ -335,7 +312,6 @@ int run_test(
         result.status ==
         uartdiag::DiagnosticStatus::CrcError
     ) {
-
         std::cout
             << "Expected CRC: 0x"
             << std::uppercase
@@ -373,7 +349,6 @@ bool parse_baud_rate(
     unsigned int& baud_rate
 ) {
     try {
-
         const unsigned long value =
             std::stoul(input);
 
@@ -387,9 +362,7 @@ bool parse_baud_rate(
         }
 
         baud_rate =
-            static_cast<unsigned int>(
-                value
-            );
+            static_cast<unsigned int>(value);
 
         return true;
     }
@@ -405,7 +378,6 @@ void update_statistics(
     ++statistics.frames_received;
 
     switch (result.severity) {
-
         case uartdiag::DiagnosticSeverity::Info:
             ++statistics.info_count;
             break;
@@ -424,9 +396,7 @@ void update_statistics(
     }
 
     if (result.is_valid()) {
-
         ++statistics.valid_frames;
-
         return;
     }
 
@@ -434,9 +404,7 @@ void update_statistics(
         result.status ==
         uartdiag::DiagnosticStatus::CrcError
     ) {
-
         ++statistics.crc_errors;
-
         return;
     }
 
@@ -449,42 +417,32 @@ void print_statistics(
     std::cout
         << "\nSession Statistics\n"
         << "------------------\n"
-
         << "Bytes received:  "
         << statistics.bytes_received
         << '\n'
-
         << "Frames received: "
         << statistics.frames_received
         << '\n'
-
         << "Valid frames:    "
         << statistics.valid_frames
         << '\n'
-
         << "CRC errors:      "
         << statistics.crc_errors
         << '\n'
-
         << "Invalid frames:  "
         << statistics.invalid_frames
         << '\n'
-
         << "\nSeverity Summary\n"
         << "----------------\n"
-
         << "INFO:             "
         << statistics.info_count
         << '\n'
-
         << "WARNING:          "
         << statistics.warning_count
         << '\n'
-
         << "ERROR:            "
         << statistics.error_count
         << '\n'
-
         << "CRITICAL:         "
         << statistics.critical_count
         << '\n';
@@ -502,7 +460,6 @@ void process_stream(
         g_running &&
         parser.next_frame(frame)
     ) {
-
         ++frame_number;
 
         const std::string timestamp =
@@ -522,12 +479,10 @@ void process_stream(
             build_report(frame);
 
         report.has_frame_number = true;
-        report.frame_number =
-            frame_number;
+        report.frame_number = frame_number;
 
         report.has_timestamp = true;
-        report.timestamp =
-            timestamp;
+        report.timestamp = timestamp;
 
         update_statistics(
             report.result,
@@ -535,19 +490,15 @@ void process_stream(
         );
 
         std::cout
-            << uartdiag::format_report(
-                report
-            );
+            << uartdiag::format_report(report);
 
         if (logger != nullptr) {
-
             std::string log_error;
 
             if (!logger->write(
                     report,
                     log_error
                 )) {
-
                 std::cerr
                     << "Logging error: "
                     << log_error
@@ -589,22 +540,22 @@ void push_simulated_data(
 int run_serial(
     const std::string& port,
     unsigned int baud_rate,
-    const std::string& log_filename
+    const std::string& log_filename,
+    const uartdiag::DiagnosticConfig& config
 ) {
-    uartdiag::SerialConfig config;
+    uartdiag::SerialConfig serial_config;
 
-    config.port = port;
-    config.baud_rate = baud_rate;
+    serial_config.port = port;
+    serial_config.baud_rate = baud_rate;
 
     uartdiag::SerialPort serial;
 
     std::string error;
 
     if (!serial.open(
-            config,
+            serial_config,
             error
         )) {
-
         std::cerr
             << "Serial error: "
             << error
@@ -621,7 +572,6 @@ int run_serial(
             log_filename,
             log_error
         )) {
-
         std::cerr
             << "Logging error: "
             << log_error
@@ -633,35 +583,30 @@ int run_serial(
     }
 
 #ifdef _WIN32
-
     if (!install_console_handler()) {
-
         std::cerr
             << "Warning: could not install "
             << "console shutdown handler.\n";
     }
-
 #endif
 
     std::cout
         << "\nUARTDiag Serial Monitor\n"
         << "========================================\n"
-
         << "Port: "
-        << config.port
+        << serial_config.port
         << '\n'
-
         << "Baud: "
-        << config.baud_rate
+        << serial_config.baud_rate
         << '\n'
-
+        << "Read size: "
+        << config.serial_read_size
+        << '\n'
         << "Log:  "
         << log_filename
         << "\n\n"
-
         << "Listening for UART frames...\n"
         << "Press Ctrl+C to stop.\n"
-
         << "========================================\n";
 
     uartdiag::FrameStreamParser parser;
@@ -671,15 +616,13 @@ int run_serial(
     std::size_t frame_number = 0;
 
     while (g_running) {
-
         std::vector<std::uint8_t> incoming;
 
         if (!serial.read(
                 incoming,
-                256,
+                config.serial_read_size,
                 error
             )) {
-
             if (!g_running) {
                 break;
             }
@@ -714,20 +657,16 @@ int run_serial(
     logger.close();
 
 #ifdef _WIN32
-
     SetConsoleCtrlHandler(
         console_ctrl_handler,
         FALSE
     );
-
 #endif
 
     std::cout
         << "\nUARTDiag serial monitor stopped.\n";
 
-    print_statistics(
-        statistics
-    );
+    print_statistics(statistics);
 
     return 0;
 }
@@ -751,7 +690,9 @@ void simulate_valid(
     );
 
     uartdiag::FrameStreamParser parser;
+
     SerialStatistics statistics;
+
     std::size_t frame_number = 0;
 
     uartdiag::Frame frame{
@@ -783,7 +724,9 @@ void simulate_crc(
     );
 
     uartdiag::FrameStreamParser parser;
+
     SerialStatistics statistics;
+
     std::size_t frame_number = 0;
 
     uartdiag::Frame frame{
@@ -817,7 +760,9 @@ void simulate_noise(
     );
 
     uartdiag::FrameStreamParser parser;
+
     SerialStatistics statistics;
+
     std::size_t frame_number = 0;
 
     const std::vector<std::uint8_t> noise{
@@ -867,7 +812,9 @@ void simulate_fragmented(
     );
 
     uartdiag::FrameStreamParser parser;
+
     SerialStatistics statistics;
+
     std::size_t frame_number = 0;
 
     uartdiag::Frame frame{
@@ -922,7 +869,6 @@ int run_simulation(
             log_filename,
             log_error
         )) {
-
         std::cerr
             << "Logging error: "
             << log_error
@@ -940,7 +886,6 @@ int run_simulation(
         scenario == "all" ||
         scenario.empty()
     ) {
-
         std::cout
             << "\nUARTDiag UART Simulation Suite\n"
             << "========================================\n"
@@ -1006,12 +951,10 @@ bool parse_log_option(
         index < argc;
         ++index
     ) {
-
         const std::string argument =
             argv[index];
 
         if (argument == "--log") {
-
             if (index + 1 >= argc) {
                 return false;
             }
@@ -1032,37 +975,118 @@ bool parse_log_option(
     return true;
 }
 
+bool extract_config_option(
+    int argc,
+    char* argv[],
+    std::string& config_filename,
+    std::vector<std::string>& remaining_arguments
+) {
+    remaining_arguments.clear();
+
+    for (int index = 1; index < argc; ++index) {
+        const std::string argument =
+            argv[index];
+
+        if (argument == "--config") {
+            if (index + 1 >= argc) {
+                std::cerr
+                    << "Error: --config requires a filename.\n";
+
+                return false;
+            }
+
+            config_filename =
+                argv[++index];
+
+            if (config_filename.empty()) {
+                std::cerr
+                    << "Error: configuration filename cannot be empty.\n";
+
+                return false;
+            }
+
+            continue;
+        }
+
+        remaining_arguments.push_back(
+            argument
+        );
+    }
+
+    return true;
+}
+
 } // namespace
 
 int main(
     int argc,
     char* argv[]
 ) {
-    if (argc < 2) {
+    uartdiag::DiagnosticConfig config;
 
+    std::string config_filename;
+
+    std::vector<std::string> arguments;
+
+    if (!extract_config_option(
+            argc,
+            argv,
+            config_filename,
+            arguments
+        )) {
+        return 1;
+    }
+
+    if (!config_filename.empty()) {
+        std::string config_error;
+
+        if (!uartdiag::load_config_file(
+                config_filename,
+                config,
+                config_error
+            )) {
+            std::cerr
+                << "Configuration error: "
+                << config_error
+                << '\n';
+
+            return 1;
+        }
+
+        std::cout
+            << "Configuration loaded: "
+            << config_filename
+            << '\n';
+    }
+
+    if (!config.is_valid()) {
+        std::cerr
+            << "Error: invalid configuration.\n";
+
+        return 1;
+    }
+
+    if (arguments.empty()) {
         print_usage();
 
         return 1;
     }
 
     const std::string command =
-        argv[1];
+        arguments[0];
 
     if (
         command == "--help" ||
         command == "-h" ||
         command == "help"
     ) {
-
         print_usage();
 
         return 0;
     }
 
     if (command == "--test") {
-
-        if (argc < 3) {
-
+        if (arguments.size() < 2) {
             std::cerr
                 << "Error: missing test type.\n\n";
 
@@ -1072,14 +1096,12 @@ int main(
         }
 
         return run_test(
-            argv[2]
+            arguments[1]
         );
     }
 
     if (command == "--decode") {
-
-        if (argc < 3) {
-
+        if (arguments.size() < 2) {
             std::cerr
                 << "Error: missing hexadecimal frame.\n\n";
 
@@ -1089,14 +1111,12 @@ int main(
         }
 
         return run_decode(
-            argv[2]
+            arguments[1]
         );
     }
 
     if (command == "--serial") {
-
-        if (argc < 3) {
-
+        if (arguments.size() < 2) {
             std::cerr
                 << "Error: missing serial port.\n\n";
 
@@ -1106,46 +1126,81 @@ int main(
         }
 
         const std::string port =
-            argv[2];
+            arguments[1];
 
         unsigned int baud_rate =
-            115200;
+            config.default_baud_rate;
 
-        int next_argument = 3;
+        std::size_t argument_index = 2;
 
         if (
-            next_argument < argc &&
-            std::string(argv[next_argument]) != "--log"
+            argument_index < arguments.size() &&
+            arguments[argument_index] != "--log"
         ) {
-
             if (!parse_baud_rate(
-                    argv[next_argument],
+                    arguments[argument_index],
                     baud_rate
                 )) {
-
                 std::cerr
                     << "Error: invalid baud rate: "
-                    << argv[next_argument]
+                    << arguments[argument_index]
                     << '\n';
 
                 return 1;
             }
 
-            ++next_argument;
+            ++argument_index;
         }
 
         std::string log_filename =
-            "uartdiag_serial.csv";
+            config.serial_log_filename;
 
-        if (!parse_log_option(
-                argc,
-                argv,
-                next_argument,
-                log_filename
-            )) {
+        if (
+            argument_index < arguments.size()
+        ) {
+            if (
+                arguments[argument_index] !=
+                "--log"
+            ) {
+                std::cerr
+                    << "Error: invalid serial option.\n\n";
 
+                print_usage();
+
+                return 1;
+            }
+
+            if (
+                argument_index + 1 >=
+                arguments.size()
+            ) {
+                std::cerr
+                    << "Error: --log requires a filename.\n";
+
+                return 1;
+            }
+
+            log_filename =
+                arguments[
+                    argument_index + 1
+                ];
+
+            if (log_filename.empty()) {
+                std::cerr
+                    << "Error: log filename cannot be empty.\n";
+
+                return 1;
+            }
+
+            argument_index += 2;
+        }
+
+        if (
+            argument_index !=
+            arguments.size()
+        ) {
             std::cerr
-                << "Error: invalid logging option.\n\n";
+                << "Error: unexpected serial option.\n\n";
 
             print_usage();
 
@@ -1155,43 +1210,75 @@ int main(
         return run_serial(
             port,
             baud_rate,
-            log_filename
+            log_filename,
+            config
         );
     }
 
     if (command == "--simulate") {
+        std::string scenario = "all";
 
-        const std::string scenario =
-            (
-                argc >= 3 &&
-                std::string(argv[2]) != "--log"
-            )
-                ? argv[2]
-                : "all";
+        std::size_t argument_index = 1;
 
-        int next_argument =
-            scenario == "all" &&
-            argc >= 3 &&
-            std::string(argv[2]) == "--log"
-                ? 2
-                : 3;
+        if (
+            argument_index < arguments.size() &&
+            arguments[argument_index] != "--log"
+        ) {
+            scenario =
+                arguments[argument_index];
 
-        if (scenario != "all" || argc < 3) {
-            next_argument = 3;
+            ++argument_index;
         }
 
         std::string log_filename =
-            "uartdiag_simulation.csv";
+            config.simulation_log_filename;
 
-        if (!parse_log_option(
-                argc,
-                argv,
-                next_argument,
-                log_filename
-            )) {
+        if (
+            argument_index < arguments.size()
+        ) {
+            if (
+                arguments[argument_index] !=
+                "--log"
+            ) {
+                std::cerr
+                    << "Error: invalid simulation option.\n\n";
 
+                print_usage();
+
+                return 1;
+            }
+
+            if (
+                argument_index + 1 >=
+                arguments.size()
+            ) {
+                std::cerr
+                    << "Error: --log requires a filename.\n";
+
+                return 1;
+            }
+
+            log_filename =
+                arguments[
+                    argument_index + 1
+                ];
+
+            if (log_filename.empty()) {
+                std::cerr
+                    << "Error: log filename cannot be empty.\n";
+
+                return 1;
+            }
+
+            argument_index += 2;
+        }
+
+        if (
+            argument_index !=
+            arguments.size()
+        ) {
             std::cerr
-                << "Error: invalid logging option.\n\n";
+                << "Error: unexpected simulation option.\n\n";
 
             print_usage();
 

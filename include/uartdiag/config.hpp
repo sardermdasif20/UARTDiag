@@ -21,4 +21,10 @@ struct DiagnosticConfig {
     bool is_valid() const;
 };
 
+bool load_config_file(
+    const std::string& filename,
+    DiagnosticConfig& config,
+    std::string& error
+);
+
 } // namespace uartdiag
