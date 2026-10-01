@@ -10,6 +10,7 @@
 namespace {
 
 using uartdiag::Decoder;
+using uartdiag::DiagnosticSeverity;
 using uartdiag::DiagnosticStatus;
 using uartdiag::Frame;
 using uartdiag::FrameStreamParser;
@@ -55,6 +56,11 @@ TEST(SimulationTest, ValidFramePassesThroughStreamParser) {
     EXPECT_EQ(
         result.status,
         DiagnosticStatus::Valid
+    );
+
+    EXPECT_EQ(
+        result.severity,
+        DiagnosticSeverity::Info
     );
 
     EXPECT_EQ(
@@ -110,6 +116,11 @@ TEST(SimulationTest, CorruptedFrameProducesCrcError) {
         DiagnosticStatus::CrcError
     );
 
+    EXPECT_EQ(
+        result.severity,
+        DiagnosticSeverity::Error
+    );
+
     EXPECT_FALSE(
         result.is_valid()
     );
@@ -150,13 +161,36 @@ TEST(SimulationTest, NoiseBeforeFrameIsIgnored) {
         encoded
     );
 
+    Decoder decoder;
+
+    Frame decoded{};
+
+    const auto result =
+        decoder.decode(
+            received,
+            decoded
+        );
+
+    EXPECT_EQ(
+        result.status,
+        DiagnosticStatus::Valid
+    );
+
+    EXPECT_EQ(
+        result.severity,
+        DiagnosticSeverity::Info
+    );
+
     EXPECT_EQ(
         parser.buffered_bytes(),
         0U
     );
 }
 
-TEST(SimulationTest, FakeStartByteInsideNoiseDoesNotBlockValidFrame) {
+TEST(
+    SimulationTest,
+    FakeStartByteInsideNoiseDoesNotBlockValidFrame
+) {
 
     Frame frame{
         FrameType::Response,
@@ -196,6 +230,26 @@ TEST(SimulationTest, FakeStartByteInsideNoiseDoesNotBlockValidFrame) {
     EXPECT_EQ(
         received,
         encoded
+    );
+
+    Decoder decoder;
+
+    Frame decoded{};
+
+    const auto result =
+        decoder.decode(
+            received,
+            decoded
+        );
+
+    EXPECT_EQ(
+        result.status,
+        DiagnosticStatus::Valid
+    );
+
+    EXPECT_EQ(
+        result.severity,
+        DiagnosticSeverity::Info
     );
 }
 
@@ -250,13 +304,36 @@ TEST(SimulationTest, FragmentedFrameIsReassembled) {
         encoded
     );
 
+    Decoder decoder;
+
+    Frame decoded{};
+
+    const auto result =
+        decoder.decode(
+            received,
+            decoded
+        );
+
+    EXPECT_EQ(
+        result.status,
+        DiagnosticStatus::Valid
+    );
+
+    EXPECT_EQ(
+        result.severity,
+        DiagnosticSeverity::Info
+    );
+
     EXPECT_EQ(
         parser.buffered_bytes(),
         0U
     );
 }
 
-TEST(SimulationTest, MultipleFramesAreProcessedFromSingleStream) {
+TEST(
+    SimulationTest,
+    MultipleFramesAreProcessedFromSingleStream
+) {
 
     Frame frame1{
         FrameType::SensorData,
@@ -311,6 +388,12 @@ TEST(SimulationTest, MultipleFramesAreProcessedFromSingleStream) {
 
     std::vector<std::uint8_t> received;
 
+    Decoder decoder;
+
+    Frame decoded1{};
+    Frame decoded2{};
+    Frame decoded3{};
+
     ASSERT_TRUE(
         parser.next_frame(received)
     );
@@ -318,6 +401,22 @@ TEST(SimulationTest, MultipleFramesAreProcessedFromSingleStream) {
     EXPECT_EQ(
         received,
         encoded1
+    );
+
+    const auto result1 =
+        decoder.decode(
+            received,
+            decoded1
+        );
+
+    EXPECT_EQ(
+        result1.status,
+        DiagnosticStatus::Valid
+    );
+
+    EXPECT_EQ(
+        result1.severity,
+        DiagnosticSeverity::Info
     );
 
     ASSERT_TRUE(
@@ -329,6 +428,22 @@ TEST(SimulationTest, MultipleFramesAreProcessedFromSingleStream) {
         encoded2
     );
 
+    const auto result2 =
+        decoder.decode(
+            received,
+            decoded2
+        );
+
+    EXPECT_EQ(
+        result2.status,
+        DiagnosticStatus::Valid
+    );
+
+    EXPECT_EQ(
+        result2.severity,
+        DiagnosticSeverity::Info
+    );
+
     ASSERT_TRUE(
         parser.next_frame(received)
     );
@@ -336,6 +451,22 @@ TEST(SimulationTest, MultipleFramesAreProcessedFromSingleStream) {
     EXPECT_EQ(
         received,
         encoded3
+    );
+
+    const auto result3 =
+        decoder.decode(
+            received,
+            decoded3
+        );
+
+    EXPECT_EQ(
+        result3.status,
+        DiagnosticStatus::Valid
+    );
+
+    EXPECT_EQ(
+        result3.severity,
+        DiagnosticSeverity::Info
     );
 
     EXPECT_FALSE(
@@ -348,7 +479,10 @@ TEST(SimulationTest, MultipleFramesAreProcessedFromSingleStream) {
     );
 }
 
-TEST(SimulationTest, MixedStreamProducesExpectedDiagnostics) {
+TEST(
+    SimulationTest,
+    MixedStreamProducesExpectedDiagnostics
+) {
 
     Frame valid_frame{
         FrameType::SensorData,
@@ -406,6 +540,11 @@ TEST(SimulationTest, MixedStreamProducesExpectedDiagnostics) {
         DiagnosticStatus::Valid
     );
 
+    EXPECT_EQ(
+        result1.severity,
+        DiagnosticSeverity::Info
+    );
+
     /*
      * Second frame must report CRC failure.
      */
@@ -424,6 +563,11 @@ TEST(SimulationTest, MixedStreamProducesExpectedDiagnostics) {
     EXPECT_EQ(
         result2.status,
         DiagnosticStatus::CrcError
+    );
+
+    EXPECT_EQ(
+        result2.severity,
+        DiagnosticSeverity::Error
     );
 
     /*

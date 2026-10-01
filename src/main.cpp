@@ -30,6 +30,11 @@ struct SerialStatistics {
     std::size_t valid_frames{0};
     std::size_t crc_errors{0};
     std::size_t invalid_frames{0};
+
+    std::size_t info_count{0};
+    std::size_t warning_count{0};
+    std::size_t error_count{0};
+    std::size_t critical_count{0};
 };
 
 #ifdef _WIN32
@@ -312,12 +317,17 @@ int run_test(
     std::cout
         << "\nDiagnostic Result\n"
         << "-----------------\n"
-        << "Status:  "
+        << "Status:   "
         << uartdiag::to_string(
             result.status
         )
         << '\n'
-        << "Message: "
+        << "Severity: "
+        << uartdiag::to_string(
+            result.severity
+        )
+        << '\n'
+        << "Message:  "
         << result.message
         << '\n';
 
@@ -394,6 +404,25 @@ void update_statistics(
 ) {
     ++statistics.frames_received;
 
+    switch (result.severity) {
+
+        case uartdiag::DiagnosticSeverity::Info:
+            ++statistics.info_count;
+            break;
+
+        case uartdiag::DiagnosticSeverity::Warning:
+            ++statistics.warning_count;
+            break;
+
+        case uartdiag::DiagnosticSeverity::Error:
+            ++statistics.error_count;
+            break;
+
+        case uartdiag::DiagnosticSeverity::Critical:
+            ++statistics.critical_count;
+            break;
+    }
+
     if (result.is_valid()) {
 
         ++statistics.valid_frames;
@@ -439,6 +468,25 @@ void print_statistics(
 
         << "Invalid frames:  "
         << statistics.invalid_frames
+        << '\n'
+
+        << "\nSeverity Summary\n"
+        << "----------------\n"
+
+        << "INFO:             "
+        << statistics.info_count
+        << '\n'
+
+        << "WARNING:          "
+        << statistics.warning_count
+        << '\n'
+
+        << "ERROR:            "
+        << statistics.error_count
+        << '\n'
+
+        << "CRITICAL:         "
+        << statistics.critical_count
         << '\n';
 }
 
