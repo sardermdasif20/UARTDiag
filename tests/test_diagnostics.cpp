@@ -3,6 +3,7 @@
 #include "uartdiag/frame.hpp"
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -531,4 +532,180 @@ TEST(DiagnosticSummaryTest, RecordsCriticalSeverity) {
     );
 }
 
-} // namespace
+TEST(DiagnosticSummaryFormatTest, FormatsEmptySummary) {
+
+    const uartdiag::DiagnosticSummary summary{};
+
+    const std::string output =
+        uartdiag::format_summary(summary);
+
+    EXPECT_NE(
+        output.find("UARTDiag Diagnostic Summary"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Frames Processed:  0"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Valid Frames:      0"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Invalid Frames:    0"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Severity Summary"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Diagnostic Status"),
+        std::string::npos
+    );
+}
+
+TEST(DiagnosticSummaryFormatTest, FormatsCompleteSummary) {
+
+    uartdiag::DiagnosticSummary summary{};
+
+    const uartdiag::DiagnosticResult valid_result{
+        uartdiag::DiagnosticStatus::Valid,
+        uartdiag::DiagnosticSeverity::Info,
+        0xBC,
+        0xBC,
+        "Valid frame."
+    };
+
+    const uartdiag::DiagnosticResult warning_result{
+        uartdiag::DiagnosticStatus::FrameTooShort,
+        uartdiag::DiagnosticSeverity::Warning,
+        0,
+        0,
+        "Frame too short."
+    };
+
+    const uartdiag::DiagnosticResult start_error_result{
+        uartdiag::DiagnosticStatus::InvalidStartByte,
+        uartdiag::DiagnosticSeverity::Warning,
+        0,
+        0,
+        "Invalid start byte."
+    };
+
+    const uartdiag::DiagnosticResult length_error_result{
+        uartdiag::DiagnosticStatus::InvalidLength,
+        uartdiag::DiagnosticSeverity::Error,
+        0,
+        0,
+        "Invalid length."
+    };
+
+    const uartdiag::DiagnosticResult unknown_type_result{
+        uartdiag::DiagnosticStatus::UnknownFrameType,
+        uartdiag::DiagnosticSeverity::Error,
+        0,
+        0,
+        "Unknown frame type."
+    };
+
+    const uartdiag::DiagnosticResult crc_error_result{
+        uartdiag::DiagnosticStatus::CrcError,
+        uartdiag::DiagnosticSeverity::Error,
+        0xBC,
+        0x00,
+        "CRC error."
+    };
+
+    const uartdiag::DiagnosticResult critical_result{
+        uartdiag::DiagnosticStatus::InvalidLength,
+        uartdiag::DiagnosticSeverity::Critical,
+        0,
+        0,
+        "Critical condition."
+    };
+
+    summary.record(valid_result);
+    summary.record(valid_result);
+    summary.record(warning_result);
+    summary.record(start_error_result);
+    summary.record(length_error_result);
+    summary.record(unknown_type_result);
+    summary.record(crc_error_result);
+    summary.record(critical_result);
+
+    const std::string output =
+        uartdiag::format_summary(summary);
+
+    EXPECT_NE(
+        output.find("Frames Processed:  8"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Valid Frames:      2"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Invalid Frames:    6"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Info:              2"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Warning:           2"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Error:             3"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Critical:          1"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Valid:             2"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Frame Too Short:   1"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Invalid Start:     1"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Invalid Length:    2"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("Unknown Type:      1"),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        output.find("CRC Error:         1"),
+        std::string::npos
+    );
+}
+
+} // namespace 

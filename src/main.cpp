@@ -345,41 +345,22 @@ void update_statistics(
 void print_statistics(
     const SerialStatistics& statistics
 ) {
-    const auto& summary =
-        statistics.summary;
-
     std::cout
         << "\nSession Statistics\n"
         << "------------------\n"
         << "Bytes received:  "
         << statistics.bytes_received
-        << '\n'
-        << "Frames received: "
-        << summary.frames_processed
-        << '\n'
-        << "Valid frames:    "
-        << summary.valid_frames
-        << '\n'
-        << "CRC errors:      "
-        << summary.crc_error_count
-        << '\n'
-        << "Invalid frames:  "
-        << summary.invalid_frames
-        << '\n'
-        << "\nSeverity Summary\n"
-        << "----------------\n"
-        << "INFO:             "
-        << summary.info_count
-        << '\n'
-        << "WARNING:          "
-        << summary.warning_count
-        << '\n'
-        << "ERROR:            "
-        << summary.error_count
-        << '\n'
-        << "CRITICAL:         "
-        << summary.critical_count
         << '\n';
+
+    /*
+     * DiagnosticSummary owns all diagnostic counters
+     * and formatting. Keeping formatting here centralized
+     * prevents the CLI from duplicating summary logic.
+     */
+    std::cout
+        << uartdiag::format_summary(
+            statistics.summary
+        );
 }
 
 void process_stream(

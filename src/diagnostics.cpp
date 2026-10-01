@@ -1,5 +1,7 @@
 #include "uartdiag/diagnostics.hpp"
 
+#include <sstream>
+
 namespace uartdiag {
 
 bool DiagnosticResult::is_valid() const {
@@ -111,6 +113,94 @@ std::string to_string(
     }
 
     return "UNKNOWN";
+}
+
+std::string format_summary(
+    const DiagnosticSummary& summary
+) {
+    std::ostringstream output;
+
+    output
+        << "\nUARTDiag Diagnostic Summary\n"
+        << "========================================\n";
+
+    output
+        << "Frames Processed:  "
+        << summary.frames_processed
+        << '\n';
+
+    output
+        << "Valid Frames:      "
+        << summary.valid_frames
+        << '\n';
+
+    output
+        << "Invalid Frames:    "
+        << summary.invalid_frames
+        << '\n';
+
+    output
+        << "\nSeverity Summary\n"
+        << "----------------\n";
+
+    output
+        << "Info:              "
+        << summary.info_count
+        << '\n';
+
+    output
+        << "Warning:           "
+        << summary.warning_count
+        << '\n';
+
+    output
+        << "Error:             "
+        << summary.error_count
+        << '\n';
+
+    output
+        << "Critical:          "
+        << summary.critical_count
+        << '\n';
+
+    output
+        << "\nDiagnostic Status\n"
+        << "-----------------\n";
+
+    output
+        << "Valid:             "
+        << summary.valid_count
+        << '\n';
+
+    output
+        << "Frame Too Short:   "
+        << summary.frame_too_short_count
+        << '\n';
+
+    output
+        << "Invalid Start:     "
+        << summary.invalid_start_byte_count
+        << '\n';
+
+    output
+        << "Invalid Length:    "
+        << summary.invalid_length_count
+        << '\n';
+
+    output
+        << "Unknown Type:      "
+        << summary.unknown_frame_type_count
+        << '\n';
+
+    output
+        << "CRC Error:         "
+        << summary.crc_error_count
+        << '\n';
+
+    output
+        << "========================================\n";
+
+    return output.str();
 }
 
 } // namespace uartdiag

@@ -68,4 +68,8 @@ std::string to_string(
     DiagnosticSeverity severity
 );
 
+std::string format_summary(
+    const DiagnosticSummary& summary
+);
+
 } // namespace uartdiag
