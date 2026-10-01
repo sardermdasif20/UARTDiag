@@ -8,7 +8,6 @@ DiagnosticResult Decoder::decode(
     const std::vector<std::uint8_t>& raw_data,
     Frame& frame
 ) {
-
     DiagnosticResult result{};
 
     // --------------------------------
@@ -17,8 +16,14 @@ DiagnosticResult Decoder::decode(
 
     if (raw_data.size() < 4) {
 
-        result.status = DiagnosticStatus::FrameTooShort;
-        result.message = "Frame contains insufficient bytes.";
+        result.status =
+            DiagnosticStatus::FrameTooShort;
+
+        result.severity =
+            DiagnosticSeverity::Warning;
+
+        result.message =
+            "Frame contains insufficient bytes.";
 
         return result;
     }
@@ -31,6 +36,9 @@ DiagnosticResult Decoder::decode(
 
         result.status =
             DiagnosticStatus::InvalidStartByte;
+
+        result.severity =
+            DiagnosticSeverity::Warning;
 
         result.message =
             "Invalid frame start byte.";
@@ -52,6 +60,9 @@ DiagnosticResult Decoder::decode(
         result.status =
             DiagnosticStatus::UnknownFrameType;
 
+        result.severity =
+            DiagnosticSeverity::Error;
+
         result.message =
             "Unknown frame type.";
 
@@ -69,6 +80,9 @@ DiagnosticResult Decoder::decode(
 
         result.status =
             DiagnosticStatus::InvalidLength;
+
+        result.severity =
+            DiagnosticSeverity::Error;
 
         result.message =
             "Payload length does not match frame size.";
@@ -101,8 +115,11 @@ DiagnosticResult Decoder::decode(
     const auto expected_crc =
         calculate_crc(crc_data);
 
-    result.expected_crc = expected_crc;
-    result.received_crc = frame.crc;
+    result.expected_crc =
+        expected_crc;
+
+    result.received_crc =
+        frame.crc;
 
     // --------------------------------
     // 7. Validate CRC
@@ -112,6 +129,9 @@ DiagnosticResult Decoder::decode(
 
         result.status =
             DiagnosticStatus::CrcError;
+
+        result.severity =
+            DiagnosticSeverity::Error;
 
         result.message =
             "CRC validation failed. "
@@ -126,6 +146,9 @@ DiagnosticResult Decoder::decode(
 
     result.status =
         DiagnosticStatus::Valid;
+
+    result.severity =
+        DiagnosticSeverity::Info;
 
     result.message =
         "Frame validated successfully.";

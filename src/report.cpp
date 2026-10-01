@@ -127,7 +127,6 @@ std::string format_report(
         << std::uppercase
         << std::hex
         << std::setw(2)
-        << std::setfill('0')
         << static_cast<int>(report.received_crc)
         << '\n';
 
@@ -155,6 +154,9 @@ std::string format_report(
         << "------\n"
         << "Status:         "
         << to_string(report.result.status)
+        << '\n'
+        << "Severity:       "
+        << to_string(report.result.severity)
         << '\n'
         << "Message:        "
         << report.result.message

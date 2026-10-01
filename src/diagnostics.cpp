@@ -6,8 +6,9 @@ bool DiagnosticResult::is_valid() const {
     return status == DiagnosticStatus::Valid;
 }
 
-std::string to_string(DiagnosticStatus status) {
-
+std::string to_string(
+    DiagnosticStatus status
+) {
     switch (status) {
 
         case DiagnosticStatus::Valid:
@@ -27,6 +28,27 @@ std::string to_string(DiagnosticStatus status) {
 
         case DiagnosticStatus::CrcError:
             return "CRC_ERROR";
+    }
+
+    return "UNKNOWN";
+}
+
+std::string to_string(
+    DiagnosticSeverity severity
+) {
+    switch (severity) {
+
+        case DiagnosticSeverity::Info:
+            return "INFO";
+
+        case DiagnosticSeverity::Warning:
+            return "WARNING";
+
+        case DiagnosticSeverity::Error:
+            return "ERROR";
+
+        case DiagnosticSeverity::Critical:
+            return "CRITICAL";
     }
 
     return "UNKNOWN";

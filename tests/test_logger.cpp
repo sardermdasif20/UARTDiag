@@ -122,6 +122,8 @@ TEST(LoggerTest, OpensAndWritesCsvFile) {
     EXPECT_NE(
         contents.find(
             "timestamp,frame_number,type,payload_length,"
+            "raw_data,crc_expected,crc_received,status,"
+            "severity,message"
         ),
         std::string::npos
     );
@@ -157,6 +159,13 @@ TEST(LoggerTest, OpensAndWritesCsvFile) {
     EXPECT_NE(
         contents.find(
             "VALID"
+        ),
+        std::string::npos
+    );
+
+    EXPECT_NE(
+        contents.find(
+            "INFO"
         ),
         std::string::npos
     );
@@ -268,7 +277,9 @@ TEST(LoggerTest, MultipleReportsAreAppended) {
         read_file(path);
 
     const std::string header =
-        "timestamp,frame_number,type,payload_length,";
+        "timestamp,frame_number,type,payload_length,"
+        "raw_data,crc_expected,crc_received,status,"
+        "severity,message";
 
     const auto first_header =
         contents.find(header);

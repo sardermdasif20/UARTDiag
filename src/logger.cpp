@@ -129,6 +129,7 @@ bool DiagnosticLogger::open(
             << "crc_expected,"
             << "crc_received,"
             << "status,"
+            << "severity,"
             << "message\n";
 
         if (!file_) {
@@ -209,6 +210,10 @@ bool DiagnosticLogger::write(
         << ','
         << escape_csv(
             to_string(report.result.status)
+        )
+        << ','
+        << escape_csv(
+            to_string(report.result.severity)
         )
         << ','
         << escape_csv(

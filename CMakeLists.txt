@@ -94,3 +94,15 @@ target_link_libraries(uartdiag_logger_tests
 )
 
 gtest_discover_tests(uartdiag_logger_tests)
+
+add_executable(uartdiag_diagnostics_tests
+    tests/test_diagnostics.cpp
+)
+
+target_link_libraries(uartdiag_diagnostics_tests
+    PRIVATE
+        uartdiag_lib
+        GTest::gtest_main
+)
+
+gtest_discover_tests(uartdiag_diagnostics_tests)
