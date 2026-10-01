@@ -171,3 +171,36 @@ target_link_libraries(
 gtest_discover_tests(
     uartdiag_report_tests
 )
+
+add_test(
+    NAME cli_simulate_valid
+    COMMAND uartdiag --simulate valid
+)
+
+set_tests_properties(
+    cli_simulate_valid
+    PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+add_test(
+    NAME cli_simulate_crc
+    COMMAND uartdiag --simulate crc
+)
+
+set_tests_properties(
+    cli_simulate_crc
+    PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+add_test(
+    NAME cli_simulate_all
+    COMMAND uartdiag --simulate all
+)
+
+set_tests_properties(
+    cli_simulate_all
+    PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
